@@ -4,6 +4,8 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
+  play,
+  pause,
   togglePlay,
   setCurrentTime,
   setDuration,
@@ -17,13 +19,13 @@ import {
   setEqualizerOpen,
   setSleepTimerOpen,
   cancelSleepTimer,
-  pause,
   addOfflineTrackId,
   removeOfflineTrackId,
   setOfflineTrackIds,
   setRecommendations,
   setRecommendationsLoading,
 } from '../features/player/playerSlice';
+
 import { toggleLike, setLiked } from '../store/songsSlice';
 import { selectPlaylist, fetchLikedSongs } from '../store/playlistsSlice';
 import { audioEngine } from '../lib/audio-engine';
@@ -209,6 +211,97 @@ export default function PlayerBar({ queue }: { queue: Song[] }) {
     if (audioRef.current) audioRef.current.volume = volume;
   }, [volume]);
 
+  // System MediaSession & Lock Screen / Background Audio Controller
+  useEffect(() => {
+    if (!('mediaSession' in navigator) || !currentTrack) return;
+
+    try {
+      // 1. Set Lockscreen / Notification Bar Metadata
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: currentTrack.title,
+        artist: currentTrack.artist,
+        album: currentTrack.album || 'Aura Lossless Studio',
+        artwork: currentTrack.cover_url
+          ? [
+              { src: currentTrack.cover_url, sizes: '96x96', type: 'image/jpeg' },
+              { src: currentTrack.cover_url, sizes: '128x128', type: 'image/jpeg' },
+              { src: currentTrack.cover_url, sizes: '192x192', type: 'image/jpeg' },
+              { src: currentTrack.cover_url, sizes: '256x256', type: 'image/jpeg' },
+              { src: currentTrack.cover_url, sizes: '384x384', type: 'image/jpeg' },
+              { src: currentTrack.cover_url, sizes: '512x512', type: 'image/jpeg' },
+            ]
+          : [
+              { src: '/icons/icon-192.svg', sizes: '192x192', type: 'image/svg+xml' },
+              { src: '/icons/icon-512.svg', sizes: '512x512', type: 'image/svg+xml' },
+            ],
+      });
+
+      // 2. Register Background / Lockscreen Action Handlers
+      navigator.mediaSession.setActionHandler('play', () => {
+        dispatch(play());
+      });
+      navigator.mediaSession.setActionHandler('pause', () => {
+        dispatch(pause());
+      });
+      navigator.mediaSession.setActionHandler('previoustrack', () => {
+        dispatch(previousTrack(queue));
+      });
+      navigator.mediaSession.setActionHandler('nexttrack', () => {
+        dispatch(nextTrack(queue));
+      });
+
+      navigator.mediaSession.setActionHandler('seekto', (details) => {
+        if (details.seekTime !== undefined && audioRef.current) {
+          audioRef.current.currentTime = details.seekTime;
+          dispatch(setCurrentTime(details.seekTime));
+        }
+      });
+      navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+        if (audioRef.current) {
+          const skip = details.seekOffset || 10;
+          audioRef.current.currentTime = Math.max(audioRef.current.currentTime - skip, 0);
+        }
+      });
+      navigator.mediaSession.setActionHandler('seekforward', (details) => {
+        if (audioRef.current) {
+          const skip = details.seekOffset || 10;
+          audioRef.current.currentTime = Math.min(
+            audioRef.current.currentTime + skip,
+            audioRef.current.duration || 0
+          );
+        }
+      });
+    } catch (err) {
+      console.warn('[MediaSession] Setup error:', err);
+    }
+  }, [currentTrack?.id, currentTrack?.title, currentTrack?.artist, currentTrack?.cover_url, queue, dispatch]);
+
+  // Sync Playback State with System Notification
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return;
+    try {
+      navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+    } catch (err) {
+      console.warn('[MediaSession] State sync error:', err);
+    }
+  }, [isPlaying]);
+
+  // Sync Position State with Lockscreen Seekbar
+  useEffect(() => {
+    if (!('mediaSession' in navigator) || !('setPositionState' in navigator.mediaSession)) return;
+    if (duration > 0 && !isNaN(duration) && !isNaN(currentTime)) {
+      try {
+        navigator.mediaSession.setPositionState({
+          duration: Math.max(duration, 0),
+          playbackRate: 1,
+          position: Math.min(Math.max(currentTime, 0), duration),
+        });
+      } catch (err) {
+        // Ignore rapid position updates error
+      }
+    }
+  }, [currentTime, duration]);
+
   // Sleep Timer Tick
   useEffect(() => {
     if (!sleepTimer.active || !sleepTimer.targetTimestamp) return;
@@ -249,6 +342,7 @@ export default function PlayerBar({ queue }: { queue: Song[] }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [dispatch, volume]);
 
+
   function handleSeekMouseMove(e: React.MouseEvent<HTMLDivElement>) {
     if (!duration) return;
     const rect = e.currentTarget.getBoundingClientRect();
@@ -286,7 +380,8 @@ export default function PlayerBar({ queue }: { queue: Song[] }) {
       <audio
         ref={audioRef}
         crossOrigin="anonymous"
-        preload="metadata"
+        preload="auto"
+        playsInline={true}
         onTimeUpdate={() => dispatch(setCurrentTime(audioRef.current?.currentTime ?? 0))}
         onDurationChange={() => dispatch(setDuration(audioRef.current?.duration ?? 0))}
         onProgress={updateBuffered}
@@ -295,6 +390,7 @@ export default function PlayerBar({ queue }: { queue: Song[] }) {
         onCanPlay={() => setIsBuffering(false)}
         onEnded={() => dispatch(nextTrack(queue))}
       />
+
 
       {/* SVG Gradient Definitions for Floating Navigation */}
       <svg width="0" height="0" className="hidden" aria-hidden="true">
