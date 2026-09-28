@@ -1,6 +1,6 @@
 {
   "packageId": "com.auramusic.app",
-  "host": "aura-music.netlify.app",
+  "host": "auramusicrep.netlify.app",
   "name": "Aura Music",
   "launcherName": "Aura",
   "display": "standalone",
@@ -11,16 +11,16 @@
   "backgroundColor": "#070709",
   "enableNotifications": true,
   "startUrl": "/",
-  "iconUrl": "https://aura-music.netlify.app/icons/icon-512.svg",
-  "maskableIconUrl": "https://aura-music.netlify.app/icons/icon-512.svg",
-  "monochromeIconUrl": "https://aura-music.netlify.app/icons/icon-512.svg",
+  "iconUrl": "https://auramusicrep.netlify.app/icons/icon-512.png",
+  "maskableIconUrl": "https://auramusicrep.netlify.app/icons/maskable-512.png",
+  "monochromeIconUrl": "https://auramusicrep.netlify.app/icons/icon-512.png",
   "splashScreenFadeOutDuration": 300,
   "enableSiteSettingsShortcut": true,
   "appVersionName": "1.0.0",
   "appVersionCode": 1,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
-  "webManifestUrl": "https://aura-music.netlify.app/manifest.json",
+  "webManifestUrl": "https://auramusicrep.netlify.app/manifest.json",
   "fallbackType": "customtabs",
   "features": {
     "locationDelegation": {

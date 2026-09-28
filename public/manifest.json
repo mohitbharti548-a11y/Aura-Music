@@ -1,25 +1,48 @@
 {
+  "id": "/",
   "name": "Aura Music",
   "short_name": "Aura",
   "description": "High-Fidelity Lossless Music Streaming, Equalizer & Offline Player",
   "start_url": "/",
+  "scope": "/",
+  "lang": "en",
+  "dir": "ltr",
   "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#09090d",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "background_color": "#070709",
+  "theme_color": "#070709",
   "orientation": "portrait-primary",
   "categories": ["music", "entertainment", "audio"],
   "icons": [
     {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
       "src": "/icons/icon-192.svg",
       "sizes": "192x192",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icons/icon-512.svg",
       "sizes": "512x512",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ],
   "shortcuts": [
@@ -27,19 +50,40 @@
       "name": "Search Music",
       "short_name": "Search",
       "description": "Search songs, artists, and albums",
-      "url": "/?tab=search"
+      "url": "/?tab=search",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     },
     {
       "name": "Liked Songs",
       "short_name": "Favorites",
       "description": "Open your favorite music library",
-      "url": "/?tab=liked"
+      "url": "/?tab=liked",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     },
     {
       "name": "Offline Downloads",
       "short_name": "Offline",
       "description": "Listen to downloaded music without internet",
-      "url": "/?tab=downloaded"
+      "url": "/?tab=downloaded",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
   ]
 }
