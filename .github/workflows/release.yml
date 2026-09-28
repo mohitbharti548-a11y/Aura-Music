@@ -71,28 +71,14 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
 
-      - name: Setup Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install Bubblewrap CLI
-        run: npm install -g @bubblewrap/cli
-
-      - name: Generate Android Project & Compile Standalone APK
+      - name: Build Standalone Android APK with Gradle
         run: |
-          mkdir -p android-build
-          cd android-build
-          cp ../twa-manifest.json .
-          bubblewrap init --manifest=https://auramusicrep.netlify.app/manifest.json --directory=. || true
-          if [ -f gradlew ]; then
-            chmod +x gradlew
-            ./gradlew assembleDebug
-            find . -name "*.apk" -exec cp {} ../Aura-Music.apk \;
-          fi
+          cd android
+          gradle assembleDebug --no-daemon
+          find app/build/outputs/apk/ -name "*.apk" -exec cp {} ../Aura-Music.apk \;
 
       - name: Upload Android APK to GitHub Releases
         uses: softprops/action-gh-release@v2
