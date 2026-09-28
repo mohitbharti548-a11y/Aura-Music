@@ -1,4 +1,4 @@
-name: Build & Publish Multiplatform Binaries (Desktop & Android APK)
+name: Build & Publish Release Binaries (Android APK & Desktop)
 
 on:
   push:
@@ -14,6 +14,7 @@ jobs:
     name: Build Desktop Installers (.exe, .dmg, .AppImage)
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [windows-latest, macos-latest, ubuntu-latest]
 
@@ -81,16 +82,16 @@ jobs:
       - name: Install Bubblewrap CLI
         run: npm install -g @bubblewrap/cli
 
-      - name: Build Standalone Android APK
+      - name: Generate Android Project & Compile Standalone APK
         run: |
           mkdir -p android-build
           cd android-build
           cp ../twa-manifest.json .
-          bubblewrap build --skipSigning || true
-          if [ -f app/build/outputs/apk/release/app-release-unsigned.apk ]; then
-            cp app/build/outputs/apk/release/app-release-unsigned.apk ../Aura-Music.apk
-          elif [ -f app/build/outputs/apk/debug/app-debug.apk ]; then
-            cp app/build/outputs/apk/debug/app-debug.apk ../Aura-Music.apk
+          bubblewrap init --manifest=https://auramusicrep.netlify.app/manifest.json --directory=. || true
+          if [ -f gradlew ]; then
+            chmod +x gradlew
+            ./gradlew assembleDebug
+            find . -name "*.apk" -exec cp {} ../Aura-Music.apk \;
           fi
 
       - name: Upload Android APK to GitHub Releases
