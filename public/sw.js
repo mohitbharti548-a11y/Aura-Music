@@ -1,5 +1,5 @@
-// public/sw.js - Aura Music Progressive Web App Service Worker
-const CACHE_NAME = 'aura-music-v1';
+// public/sw.js - Aura Music Progressive Web App Service Worker with In-App Auto-Update
+const CACHE_VERSION = 'aura-v' + Date.now();
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -7,23 +7,31 @@ const STATIC_ASSETS = [
   '/icons/icon-512.svg',
 ];
 
-// Install: Cache core static assets
+// 1. Install: Cache core static shell
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
+    caches.open(CACHE_VERSION).then((cache) => {
       return cache.addAll(STATIC_ASSETS);
     })
   );
-  self.skipWaiting();
+  // Allow manual skip waiting or automatic takeover
 });
 
-// Activate: Clean up old cache versions
+// 2. Message: Listen for SKIP_WAITING from PwaRegister UI
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
+// 3. Activate: Purge old cache versions and claim immediate control
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
-          if (key !== CACHE_NAME) {
+          if (key !== CACHE_VERSION && key.startsWith('aura-v')) {
+            console.log('[Aura SW] Deleting obsolete cache:', key);
             return caches.delete(key);
           }
         })
@@ -33,16 +41,22 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch: Stale-while-revalidate for static assets, Network-first for APIs
+// 4. Fetch: Stale-while-revalidate for UI assets, Network-first for dynamic routes
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Exclude audio streams & dynamic search APIs from aggressive HTTP caching (handled via IndexedDB & JIT)
+  // Exclude API requests, audio streaming, and Range header requests from service worker cache
   if (
     url.pathname.startsWith('/api/') ||
     url.pathname.startsWith('/audio/') ||
     event.request.headers.get('range')
   ) {
+    return;
+  }
+
+  // Bypass cache for sw.js itself to ensure instant update discovery
+  if (url.pathname === '/sw.js') {
+    event.respondWith(fetch(event.request));
     return;
   }
 
@@ -52,7 +66,7 @@ self.addEventListener('fetch', (event) => {
         .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
             const responseClone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
+            caches.open(CACHE_VERSION).then((cache) => {
               cache.put(event.request, responseClone);
             });
           }
