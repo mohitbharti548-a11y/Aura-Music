@@ -8,43 +8,58 @@ declare global {
   var _pgPool: Pool | undefined;
 }
 
-function getPool(): Pool {
+function getPool(): Pool | null {
   if (globalThis._pgPool) {
     return globalThis._pgPool;
   }
 
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
-    throw new Error(
-      'DATABASE_URL is not set. Add it to .env.local (see .env.local.example).'
-    );
+    return null;
   }
 
-  const isLocal =
-    connectionString.includes('localhost') ||
-    connectionString.includes('127.0.0.1');
+  try {
+    const isLocal =
+      connectionString.includes('localhost') ||
+      connectionString.includes('127.0.0.1');
 
-  const config: PoolConfig = {
-    connectionString,
-    max: 10,
-    idleTimeoutMillis: 30_000,
-    connectionTimeoutMillis: 10_000,
-    ssl: isLocal ? undefined : { rejectUnauthorized: false },
-  };
+    const config: PoolConfig = {
+      connectionString,
+      max: 10,
+      idleTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 10_000,
+      ssl: isLocal ? undefined : { rejectUnauthorized: false },
+    };
 
-  const pool = new Pool(config);
+    const pool = new Pool(config);
 
-  if (process.env.NODE_ENV !== 'production') {
-    globalThis._pgPool = pool;
+    if (process.env.NODE_ENV !== 'production') {
+      globalThis._pgPool = pool;
+    }
+
+    return pool;
+  } catch (err) {
+    console.warn('[DB] Failed to initialize Postgres pool:', err);
+    return null;
   }
-
-  return pool;
 }
 
-// Export a Proxy that lazily forwards all property and method access to getPool()
+// Export a Proxy that lazily forwards all property and method access to getPool() safely
 const pool = new Proxy({} as Pool, {
   get(_target, prop) {
     const realPool = getPool() as any;
+    if (!realPool) {
+      if (prop === 'query') {
+        return async () => ({ rows: [], rowCount: 0 });
+      }
+      if (prop === 'connect') {
+        return async () => ({
+          query: async () => ({ rows: [], rowCount: 0 }),
+          release: () => {},
+        });
+      }
+      return undefined;
+    }
     const value = realPool[prop];
     if (typeof value === 'function') {
       return value.bind(realPool);
@@ -54,3 +69,4 @@ const pool = new Proxy({} as Pool, {
 });
 
 export default pool;
+

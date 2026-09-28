@@ -1,8 +1,13 @@
 // app/api/songs/route.ts
 import type { NextRequest } from 'next/server';
 import pool from '@/lib/db';
+import { searchJioSaavn } from '@/lib/jiosaavn-client';
 
 const DEMO_USER = '00000000-0000-0000-0000-000000000001';
+
+// In-memory fallback cache for trending songs
+let cachedTrending: any[] = [];
+let lastCachedAt = 0;
 
 export async function GET(request: NextRequest) {
   const userId =
@@ -21,12 +26,37 @@ export async function GET(request: NextRequest) {
        ORDER  BY s.created_at DESC`,
       [userId]
     );
-    return Response.json(result.rows);
+
+    if (result.rows && result.rows.length > 0) {
+      return Response.json(result.rows);
+    }
+
+    // Fallback to dynamic trending studio tracks if DB is empty or unconfigured
+    const now = Date.now();
+    if (cachedTrending.length > 0 && now - lastCachedAt < 1000 * 60 * 15) {
+      return Response.json(cachedTrending);
+    }
+
+    const trendingKeywords = ['Trending Hits', 'Bollywood 2026', 'Arijit Singh', 'Punjabi Hits', 'Global Pop'];
+    const randomKeyword = trendingKeywords[Math.floor(Math.random() * trendingKeywords.length)];
+    const onlineHits = await searchJioSaavn(randomKeyword, 30).catch(() => []);
+
+    if (onlineHits && onlineHits.length > 0) {
+      cachedTrending = onlineHits;
+      lastCachedAt = now;
+      return Response.json(onlineHits);
+    }
+
+    return Response.json([]);
   } catch (err) {
     console.error('GET /api/songs', err);
-    return Response.json({ error: 'Failed to fetch songs' }, { status: 500 });
+    if (cachedTrending.length > 0) {
+      return Response.json(cachedTrending);
+    }
+    return Response.json([]);
   }
 }
+
 
 export async function POST(request: Request) {
   try {
