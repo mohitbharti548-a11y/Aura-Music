@@ -30,11 +30,19 @@
 
 ## 📲 Download & Installation Guide
 
-### 🤖 1. Android Installation (PWA / WebAPK)
-> **Direct Browser Install (Instant)**
-1. Open the Aura web player URL in **Google Chrome** or **Samsung Internet** on your Android phone.
-2. Tap the **"Install Aura App"** prompt banner at the top of the screen, or tap **⋮ (Menu) ➔ "Install App"** / **"Add to Home Screen"**.
-3. Android will automatically package and install Aura as a standalone native WebAPK with full offline audio caching and home screen launcher icon.
+### 🤖 1. Android Installation Options
+
+#### Option A: Direct Standalone APK File (`.apk`)
+Download the pre-built **`Aura-Music.apk`** from the **[GitHub Releases](../../releases)** tab or generate it via PWABuilder:
+1. Download **`Aura-Music.apk`** directly to your phone.
+2. Tap the downloaded file in your notification bar or file manager.
+3. Allow *"Install from this source"* if prompted by Android.
+4. Tap **"Install"** — Aura installs as a complete standalone Android application in your app drawer.
+
+#### Option B: 1-Click WebAPK Browser Install
+1. Open the Aura web player in **Google Chrome** on your phone.
+2. Tap the **"Install Aura App"** prompt banner at the top, or tap **⋮ ➔ "Install App"**.
+3. Android packages and installs Aura as an auto-updating WebAPK.
 
 ---
 
@@ -44,7 +52,7 @@
 2. Tap the **Share** button (the square with an arrow pointing up at the bottom bar).
 3. Scroll down and tap **"Add to Home Screen"** (`+`).
 4. Tap **"Add"** in the top right corner.
-5. Aura will launch in borderless, full-screen standalone mode without any browser search bars or chrome UI.
+5. Aura will launch in borderless, full-screen standalone mode with Lock Screen and Dynamic Island media controls.
 
 ---
 
@@ -53,9 +61,11 @@ Download pre-built standalone binaries directly from the **[GitHub Releases](../
 
 | Operating System | Installer Package | Description |
 | :--- | :--- | :--- |
+| **Android** | `Aura-Music.apk` | Standalone native Android APK package |
 | **Windows** | `Aura-Setup-x64.exe` | Windows 10/11 64-bit installer with desktop shortcut |
 | **macOS** | `Aura-Universal.dmg` | macOS installer (Apple Silicon M1/M2/M3 & Intel) |
 | **Linux** | `Aura-x86_64.AppImage` | Portable standalone binary for Ubuntu, Debian, Fedora |
+
 
 ---
 

@@ -1,0 +1,37 @@
+{
+  "packageId": "com.auramusic.app",
+  "host": "aura-music.netlify.app",
+  "name": "Aura Music",
+  "launcherName": "Aura",
+  "display": "standalone",
+  "themeColor": "#070709",
+  "themeColorDark": "#070709",
+  "navigationColor": "#000000",
+  "navigationColorDark": "#000000",
+  "backgroundColor": "#070709",
+  "enableNotifications": true,
+  "startUrl": "/",
+  "iconUrl": "https://aura-music.netlify.app/icons/icon-512.svg",
+  "maskableIconUrl": "https://aura-music.netlify.app/icons/icon-512.svg",
+  "monochromeIconUrl": "https://aura-music.netlify.app/icons/icon-512.svg",
+  "splashScreenFadeOutDuration": 300,
+  "enableSiteSettingsShortcut": true,
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://aura-music.netlify.app/manifest.json",
+  "fallbackType": "customtabs",
+  "features": {
+    "locationDelegation": {
+      "enabled": false
+    },
+    "playBilling": {
+      "enabled": false
+    }
+  },
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableAppSharing": true
+}

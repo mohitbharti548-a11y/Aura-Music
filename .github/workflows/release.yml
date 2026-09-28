@@ -1,4 +1,4 @@
-name: Release Desktop & Mobile PWA
+name: Build & Publish Multiplatform Binaries (Desktop & Android APK)
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   release-desktop:
-    name: Build & Publish Multiplatform Desktop Binaries
+    name: Build Desktop Installers (.exe, .dmg, .AppImage)
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -44,7 +44,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload Release Binaries to GitHub Releases
+      - name: Upload Desktop Binaries to GitHub Releases
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
@@ -54,5 +54,49 @@ jobs:
             dist/*.zip
             dist/*.AppImage
             dist/*.deb
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  release-android-apk:
+    name: Build Standalone Android APK (.apk)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Bubblewrap CLI
+        run: npm install -g @bubblewrap/cli
+
+      - name: Build Standalone Android APK
+        run: |
+          mkdir -p android-build
+          cd android-build
+          cp ../twa-manifest.json .
+          bubblewrap build --skipSigning || true
+          if [ -f app/build/outputs/apk/release/app-release-unsigned.apk ]; then
+            cp app/build/outputs/apk/release/app-release-unsigned.apk ../Aura-Music.apk
+          elif [ -f app/build/outputs/apk/debug/app-debug.apk ]; then
+            cp app/build/outputs/apk/debug/app-debug.apk ../Aura-Music.apk
+          fi
+
+      - name: Upload Android APK to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: Aura-Music.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
