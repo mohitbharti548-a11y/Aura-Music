@@ -1,0 +1,75 @@
+# .github/workflows/crawl.yml
+# Runs the metadata crawler on a schedule to keep the catalog fresh.
+# Also runs manually via workflow_dispatch.
+#
+# Setup required:
+#   Add DATABASE_URL as a GitHub Actions Secret in your repo settings:
+#   Settings → Secrets and variables → Actions → New repository secret
+
+name: 🎵 Music Catalog Crawler
+
+on:
+  # Run every day at 06:00 UTC
+  schedule:
+    - cron: '0 6 * * *'
+  # Allow manual trigger from the Actions tab
+  workflow_dispatch:
+    inputs:
+      query:
+        description: 'Optional search query (overrides watchlist)'
+        required: false
+        type: string
+      source:
+        description: 'Metadata source'
+        required: false
+        default: 'itunes'
+        type: choice
+        options: [itunes, deezer]
+      limit:
+        description: 'Max results per query'
+        required: false
+        default: '15'
+        type: string
+
+jobs:
+  crawl:
+    name: Crawl & Ingest Metadata
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run watchlist crawler
+        if: ${{ !inputs.query }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXT_PUBLIC_DEMO_USER_ID: ${{ secrets.DEMO_USER_ID }}
+        run: |
+          echo "🔍 Running watchlist crawler..."
+          npm run crawl:watchlist
+
+      - name: Run custom query crawler
+        if: ${{ inputs.query }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXT_PUBLIC_DEMO_USER_ID: ${{ secrets.DEMO_USER_ID }}
+        run: |
+          echo "🔍 Crawling for: ${{ inputs.query }}"
+          npm run crawl -- \
+            --query "${{ inputs.query }}" \
+            --source "${{ inputs.source || 'itunes' }}" \
+            --limit "${{ inputs.limit || '15' }}"
+
+      - name: Crawler complete
+        run: echo "✅ Catalog update complete"

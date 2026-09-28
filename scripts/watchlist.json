@@ -1,0 +1,5 @@
+{
+  "artists": ["Billie Eilish", "The Weeknd", "Daft Punk", "Massive Attack", "Portishead"],
+  "queries": ["ambient electronic 2024", "lo-fi hip hop", "jazz fusion"],
+  "limit": 10
+}

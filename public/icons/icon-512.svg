@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="aura-bg-512" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#07070d" />
+      <stop offset="100%" stop-color="#141420" />
+    </linearGradient>
+    <linearGradient id="aura-grad-512" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8b5cf6" />
+      <stop offset="50%" stop-color="#d946ef" />
+      <stop offset="100%" stop-color="#6366f1" />
+    </linearGradient>
+    <filter id="glow-512" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="16" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  <!-- App Icon Background -->
+  <rect width="512" height="512" rx="112" fill="url(#aura-bg-512)" stroke="rgba(255,255,255,0.15)" stroke-width="4" />
+  
+  <!-- Glowing Aura Sound Waves -->
+  <g filter="url(#glow-512)">
+    <circle cx="256" cy="256" r="130" fill="none" stroke="url(#aura-grad-512)" stroke-width="14" opacity="0.35" />
+    <circle cx="256" cy="256" r="175" fill="none" stroke="url(#aura-grad-512)" stroke-width="6" opacity="0.2" />
+    <path d="M140 256 C170 160, 200 352, 230 256 C260 160, 290 352, 320 256 C350 180, 380 332, 400 256" fill="none" stroke="url(#aura-grad-512)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" />
+    <circle cx="256" cy="256" r="20" fill="#ffffff" />
+  </g>
+</svg>

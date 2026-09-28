@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <defs>
+    <linearGradient id="aura-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#09090f" />
+      <stop offset="100%" stop-color="#161622" />
+    </linearGradient>
+    <linearGradient id="aura-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8b5cf6" />
+      <stop offset="50%" stop-color="#d946ef" />
+      <stop offset="100%" stop-color="#6366f1" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  <!-- App Icon Background -->
+  <rect width="192" height="192" rx="42" fill="url(#aura-bg)" stroke="rgba(255,255,255,0.12)" stroke-width="2" />
+  
+  <!-- Glowing Aura Sound Waves -->
+  <g filter="url(#glow)">
+    <circle cx="96" cy="96" r="48" fill="none" stroke="url(#aura-grad)" stroke-width="6" opacity="0.4" />
+    <path d="M56 96 C66 60, 76 132, 86 96 C96 60, 106 132, 116 96 C126 68, 136 124, 146 96" fill="none" stroke="url(#aura-grad)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" />
+    <circle cx="96" cy="96" r="8" fill="#ffffff" />
+  </g>
+</svg>

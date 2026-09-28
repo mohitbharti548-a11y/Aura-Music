@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# electron / desktop packaging
+/dist/
+/release/
+
+# audio cache
+/public/audio/cache/
+
