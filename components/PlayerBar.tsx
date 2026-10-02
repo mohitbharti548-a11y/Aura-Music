@@ -1,6 +1,6 @@
 'use client';
 // components/PlayerBar.tsx
-// Spotify-Grade Responsive Music Player with Swipe-to-Skip Mini Player & Clean Bottom Navigation.
+// Spotify & Echo-Grade Responsive Music Player with Floating Pill Mini-Player & Full Lockscreen MediaSession
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
@@ -38,6 +38,11 @@ import {
   removeDownloadedTrack,
 } from '../lib/offline-storage';
 import { recordListeningEvent } from '../lib/personalization';
+import {
+  updateMediaSessionMetadata,
+  syncMediaSessionPlaybackState,
+  syncMediaSessionPosition,
+} from '../lib/media-session';
 import ExpandedPlayer from './ExpandedPlayer';
 import QueueDrawer from './QueueDrawer';
 import EqualizerModal from './EqualizerModal';
@@ -70,6 +75,7 @@ export default function PlayerBar({ queue }: { queue: Song[] }) {
   } = useAppSelector((s) => s.player);
 
   const audioRef = useRef<HTMLAudioElement>(null);
+  const loadedTrackIdRef = useRef<string | null>(null);
 
   const { selectedId } = useAppSelector((s) => s.playlists);
   const isHome = selectedId === null || selectedId === 'home';
@@ -91,35 +97,6 @@ export default function PlayerBar({ queue }: { queue: Song[] }) {
   const touchStartY = useRef<number | null>(null);
   const isSwiping = useRef(false);
 
-  // Close hamburger menu on outside click or Escape key
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (
-        menuRef.current &&
-        !menuRef.current.contains(e.target as Node) &&
-        menuButtonRef.current &&
-        !menuButtonRef.current.contains(e.target as Node)
-      ) {
-        setIsMenuOpen(false);
-      }
-    }
-
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        setIsMenuOpen(false);
-      }
-    }
-
-    if (isMenuOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      document.addEventListener('keydown', handleKeyDown);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isMenuOpen]);
-
   // Initialize offline track IDs from IndexedDB on mount
   useEffect(() => {
     getAllDownloadedTrackIds().then((ids) => {
@@ -137,12 +114,17 @@ export default function PlayerBar({ queue }: { queue: Song[] }) {
     } else {
       audio.pause();
     }
+    syncMediaSessionPlaybackState(isPlaying);
   }, [isPlaying]);
 
-  // Load and play track with Offline IndexedDB support
+  // Load track source only when track ID actually changes
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !currentTrack) return;
+
+    // Avoid reloading if already loaded this track ID
+    if (loadedTrackIdRef.current === currentTrack.id) return;
+    loadedTrackIdRef.current = currentTrack.id;
 
     audioEngine.init(audio);
 
@@ -196,28 +178,30 @@ export default function PlayerBar({ queue }: { queue: Song[] }) {
         recordListeningEvent(currentTrack, 'play');
       }
 
-      // Dynamic 10-Song Sequential Recommendation Radio Generation
-      dispatch(setRecommendationsLoading(true));
-      fetch('/api/recommendations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          seedSong: currentTrack,
-          hiddenTrackIds,
-          limit: 10,
-        }),
-      })
-        .then((r) => r.json())
-        .then((data) => {
-          if (data.recommendations && Array.isArray(data.recommendations)) {
-            dispatch(setRecommendations(data.recommendations));
-          } else {
-            dispatch(setRecommendationsLoading(false));
-          }
+      // Initial seed recommendations if empty
+      if (recommendations.length < 5) {
+        dispatch(setRecommendationsLoading(true));
+        fetch('/api/recommendations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            seedSong: currentTrack,
+            hiddenTrackIds,
+            limit: 10,
+          }),
         })
-        .catch(() => {
-          dispatch(setRecommendationsLoading(false));
-        });
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.recommendations && Array.isArray(data.recommendations)) {
+              dispatch(setRecommendations(data.recommendations));
+            } else {
+              dispatch(setRecommendationsLoading(false));
+            }
+          })
+          .catch(() => {
+            dispatch(setRecommendationsLoading(false));
+          });
+      }
     }
 
     setupTrackAudio();
@@ -251,7 +235,7 @@ export default function PlayerBar({ queue }: { queue: Song[] }) {
     if (audioRef.current) audioRef.current.volume = volume;
   }, [volume]);
 
-  // Persist exact currentTime periodically to aura_last_session for resume on app reopen
+  // Persist exact currentTime periodically to aura_last_session
   useEffect(() => {
     if (!currentTrack || !isPlaying) return;
     const interval = setInterval(() => {
@@ -268,80 +252,41 @@ export default function PlayerBar({ queue }: { queue: Song[] }) {
     return () => clearInterval(interval);
   }, [currentTrack, currentTime, duration, isPlaying]);
 
-  // System MediaSession & Lock Screen / Background Audio Controller
+  // MediaSession & Lock Screen / Notification Panel Media Controller
   useEffect(() => {
-    if (!('mediaSession' in navigator) || !currentTrack) return;
+    if (!currentTrack) return;
 
-    try {
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: currentTrack.title,
-        artist: currentTrack.artist,
-        album: currentTrack.album || 'Aura Lossless Studio',
-        artwork: currentTrack.cover_url
-          ? [
-              { src: currentTrack.cover_url, sizes: '96x96', type: 'image/jpeg' },
-              { src: currentTrack.cover_url, sizes: '128x128', type: 'image/jpeg' },
-              { src: currentTrack.cover_url, sizes: '192x192', type: 'image/jpeg' },
-              { src: currentTrack.cover_url, sizes: '256x256', type: 'image/jpeg' },
-              { src: currentTrack.cover_url, sizes: '384x384', type: 'image/jpeg' },
-              { src: currentTrack.cover_url, sizes: '512x512', type: 'image/jpeg' },
-            ]
-          : [
-              { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-              { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
-            ],
-      });
-
-      navigator.mediaSession.setActionHandler('play', () => dispatch(play()));
-      navigator.mediaSession.setActionHandler('pause', () => dispatch(pause()));
-      navigator.mediaSession.setActionHandler('previoustrack', () => dispatch(previousTrack(queue)));
-      navigator.mediaSession.setActionHandler('nexttrack', () => dispatch(nextTrack(queue)));
-      navigator.mediaSession.setActionHandler('seekto', (details) => {
-        if (details.seekTime !== undefined && audioRef.current) {
-          audioRef.current.currentTime = details.seekTime;
-          dispatch(setCurrentTime(details.seekTime));
-        }
-      });
-      navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+    updateMediaSessionMetadata(currentTrack, {
+      onPlay: () => dispatch(play()),
+      onPause: () => dispatch(pause()),
+      onPrev: () => dispatch(previousTrack(queue)),
+      onNext: () => dispatch(nextTrack(queue)),
+      onSeekTo: (time) => {
         if (audioRef.current) {
-          const skip = details.seekOffset || 10;
-          audioRef.current.currentTime = Math.max(audioRef.current.currentTime - skip, 0);
+          audioRef.current.currentTime = time;
+          dispatch(setCurrentTime(time));
         }
-      });
-      navigator.mediaSession.setActionHandler('seekforward', (details) => {
+      },
+      onSeekBackward: (offset) => {
         if (audioRef.current) {
-          const skip = details.seekOffset || 10;
+          audioRef.current.currentTime = Math.max(audioRef.current.currentTime - offset, 0);
+        }
+      },
+      onSeekForward: (offset) => {
+        if (audioRef.current) {
           audioRef.current.currentTime = Math.min(
-            audioRef.current.currentTime + skip,
+            audioRef.current.currentTime + offset,
             audioRef.current.duration || 0
           );
         }
-      });
-    } catch (err) {
-      console.warn('[MediaSession] Setup error:', err);
-    }
-  }, [currentTrack?.id, currentTrack?.title, currentTrack?.artist, currentTrack?.cover_url, queue, dispatch]);
+      },
+    });
+
+    syncMediaSessionPlaybackState(isPlaying);
+  }, [currentTrack?.id, currentTrack?.title, currentTrack?.artist, isPlaying, queue, dispatch]);
 
   useEffect(() => {
-    if (!('mediaSession' in navigator)) return;
-    try {
-      navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
-    } catch (err) {
-      console.warn('[MediaSession] State sync error:', err);
-    }
-  }, [isPlaying]);
-
-  useEffect(() => {
-    if (!('mediaSession' in navigator) || !('setPositionState' in navigator.mediaSession)) return;
-    if (duration > 0 && !isNaN(duration) && !isNaN(currentTime)) {
-      try {
-        navigator.mediaSession.setPositionState({
-          duration: Math.max(duration, 0),
-          playbackRate: 1,
-          position: Math.min(Math.max(currentTime, 0), duration),
-        });
-      } catch (err) {}
-    }
+    syncMediaSessionPosition(currentTime, duration);
   }, [currentTime, duration]);
 
   // Sleep Timer Tick
@@ -409,11 +354,7 @@ export default function PlayerBar({ queue }: { queue: Song[] }) {
       } else if (swipeX > 45) {
         dispatch(previousTrack(queue));
       }
-    } else if (Math.abs(swipeX) < 8) {
-      // Tap on mini player -> open full screen
-      if (currentTrack) dispatch(setExpandedOpen(true));
     }
-
     setSwipeX(0);
     touchStartX.current = null;
     touchStartY.current = null;
@@ -463,7 +404,7 @@ export default function PlayerBar({ queue }: { queue: Song[] }) {
       />
 
       {/* ==================================================================== */}
-      {/* 1. SPOTIFY MINI PLAYER (Floats above mobile nav or desktop dock)      */}
+      {/* 1. FLOATING PILL MINI-PLAYCARD (Matching Reference Image)            */}
       {/* ==================================================================== */}
       {currentTrack && (
         <div
@@ -471,192 +412,89 @@ export default function PlayerBar({ queue }: { queue: Song[] }) {
             transform: `translateX(${swipeX}px)`,
             transition: isSwiping.current ? 'none' : 'transform 0.25s cubic-bezier(0.32, 0.72, 0, 1)',
           }}
-          className="fixed bottom-[62px] sm:bottom-4 left-2 right-2 sm:left-4 sm:right-4 max-w-5xl mx-auto z-40 select-none"
+          className="fixed bottom-[60px] sm:bottom-4 left-3 right-3 sm:left-6 sm:right-6 max-w-lg mx-auto z-40 select-none"
         >
           <div
             onTouchStart={handleMiniTouchStart}
             onTouchMove={handleMiniTouchMove}
             onTouchEnd={handleMiniTouchEnd}
-            className="bg-[#14141e]/95 backdrop-blur-3xl border border-white/10 rounded-xl sm:rounded-2xl shadow-[0_12px_36px_rgba(0,0,0,0.85)] overflow-hidden cursor-pointer"
+            onClick={() => dispatch(setExpandedOpen(true))}
+            className="bg-[#12121e]/95 backdrop-blur-3xl border border-white/15 rounded-full px-3 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.85)] flex items-center justify-between gap-3 cursor-pointer hover:border-white/25 transition-all group"
           >
-            {/* Top Row: Mini Player Row */}
-            <div className="h-14 sm:h-18 px-3 sm:px-5 flex items-center justify-between">
-              
-              {/* Left: Artwork + Title & Artist */}
-              <div
-                onClick={() => dispatch(setExpandedOpen(true))}
-                className="flex items-center gap-3 min-w-0 flex-1 pr-2"
-              >
-                <div className="relative w-10 h-10 sm:w-11 sm:h-11 rounded-lg overflow-hidden bg-zinc-900 shrink-0 border border-white/10 shadow-sm">
-                  {currentTrack.cover_url ? (
-                    <img
-                      src={currentTrack.cover_url}
-                      alt={currentTrack.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-tr from-violet-600 to-indigo-900 flex items-center justify-center text-xs">
-                      ✦
-                    </div>
-                  )}
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm font-bold text-white truncate tracking-tight">
-                    {currentTrack.title}
-                  </p>
-                  <p className="text-[11px] text-zinc-400 truncate mt-0.5 font-medium">
-                    {currentTrack.artist}
-                  </p>
-                </div>
-              </div>
-
-              {/* Center: Desktop Controls & Timeline Scrubber (>=640px) */}
-              <div
-                onClick={(e) => e.stopPropagation()}
-                className="hidden sm:flex flex-col items-center gap-1 flex-1 max-w-md px-3"
-              >
-                <div className="flex items-center gap-4">
-                  <button
-                    onClick={() => dispatch(toggleShuffle())}
-                    className={`text-xs transition-colors relative ${
-                      isShuffle ? 'text-violet-400 font-bold' : 'text-zinc-400 hover:text-white'
+            {/* Left: Circular Spinning Artwork + Track Info */}
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="relative w-11 h-11 rounded-full overflow-hidden bg-zinc-900 shrink-0 border-2 border-white/20 shadow-md">
+                {currentTrack.cover_url ? (
+                  <img
+                    src={currentTrack.cover_url}
+                    alt={currentTrack.title}
+                    className={`w-full h-full object-cover transition-all ${
+                      isPlaying ? 'animate-[spin_12s_linear_infinite]' : ''
                     }`}
-                    title="Shuffle"
-                  >
-                    ⇄
-                  </button>
-
-                  <button
-                    onClick={() => dispatch(previousTrack(queue))}
-                    className="text-zinc-300 hover:text-white text-sm transition-transform active:scale-90"
-                    title="Previous"
-                  >
-                    ⏮
-                  </button>
-
-                  <button
-                    onClick={() => dispatch(togglePlay())}
-                    className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center shadow-md transition-transform active:scale-95 hover:scale-105"
-                    title={isPlaying ? 'Pause' : 'Play'}
-                  >
-                    {isPlaying ? (
-                      <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-                      </svg>
-                    ) : (
-                      <svg className="w-3.5 h-3.5 fill-current ml-0.5" viewBox="0 0 24 24">
-                        <path d="M8 5v14l11-7z" />
-                      </svg>
-                    )}
-                  </button>
-
-                  <button
-                    onClick={() => dispatch(nextTrack(queue))}
-                    className="text-zinc-300 hover:text-white text-sm transition-transform active:scale-90"
-                    title="Next"
-                  >
-                    ⏭
-                  </button>
-
-                  <button
-                    onClick={() => dispatch(cycleRepeat())}
-                    className={`text-xs transition-colors relative ${
-                      repeatMode !== 'off' ? 'text-violet-400 font-bold' : 'text-zinc-400 hover:text-white'
-                    }`}
-                    title="Repeat"
-                  >
-                    ↻
-                  </button>
-                </div>
-
-                <div className="w-full flex items-center gap-2 text-[10px] text-zinc-400">
-                  <span className="w-8 text-right">{formatTime(currentTime)}</span>
-                  <div className="relative flex-1 h-1 bg-white/15 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-white rounded-full transition-all"
-                      style={{ width: `${progress}%` }}
-                    />
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-tr from-violet-600 to-indigo-900 flex items-center justify-center text-xs">
+                    ✦
                   </div>
-                  <span className="w-8">{formatTime(duration)}</span>
-                </div>
+                )}
+                {/* Center hole for vinyl record aesthetic */}
+                <div className="absolute inset-0 m-auto w-2.5 h-2.5 rounded-full bg-[#12121e] border border-white/30" />
               </div>
 
-              {/* Right: Quick Action Controls */}
-              <div
-                onClick={(e) => e.stopPropagation()}
-                className="flex items-center gap-2 sm:gap-3 shrink-0"
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-white truncate tracking-tight">
+                  {currentTrack.title}
+                </p>
+                <p className="text-xs text-zinc-400 truncate mt-0.5">
+                  {currentTrack.artist}
+                </p>
+              </div>
+            </div>
+
+            {/* Right: Minimal Playback Controls (Prev, Big Play/Pause, Next) */}
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-2 sm:gap-3 shrink-0"
+            >
+              {/* Previous Track */}
+              <button
+                onClick={() => dispatch(previousTrack(queue))}
+                className="p-1.5 text-zinc-300 hover:text-white transition-transform active:scale-90"
+                title="Previous Track"
               >
-                {/* Like Button */}
-                <button
-                  onClick={() => {
-                    const nextLiked = !currentTrack.is_liked;
-                    dispatch(setLiked({ id: currentTrack.id, liked: nextLiked }));
-                    dispatch(toggleLike({ id: currentTrack.id, currentlyLiked: !!currentTrack.is_liked }))
-                      .unwrap()
-                      .catch(() => {
-                        dispatch(setLiked({ id: currentTrack.id, liked: !!currentTrack.is_liked }));
-                      });
-                  }}
-                  className="p-1.5 text-zinc-400 hover:text-white transition-transform active:scale-125"
-                  title={currentTrack.is_liked ? 'Liked' : 'Like'}
-                >
-                  <svg
-                    className={`w-5 h-5 transition-colors ${
-                      currentTrack.is_liked ? 'text-rose-500 fill-rose-500' : 'text-zinc-400'
-                    }`}
-                    fill={currentTrack.is_liked ? 'currentColor' : 'none'}
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                  <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
+                </svg>
+              </button>
+
+              {/* Big Circular Play / Pause Button */}
+              <button
+                onClick={() => dispatch(togglePlay())}
+                className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center shadow-lg transition-transform active:scale-90 hover:scale-105"
+                title={isPlaying ? 'Pause' : 'Play'}
+              >
+                {isPlaying ? (
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                    <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
                   </svg>
-                </button>
+                ) : (
+                  <svg className="w-4 h-4 fill-current ml-0.5" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                )}
+              </button>
 
-                {/* Mobile Play / Pause Button */}
-                <button
-                  onClick={() => dispatch(togglePlay())}
-                  className="sm:hidden w-9 h-9 rounded-full bg-white text-black flex items-center justify-center shadow-md active:scale-90"
-                >
-                  {isPlaying ? (
-                    <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                      <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-                    </svg>
-                  ) : (
-                    <svg className="w-4 h-4 fill-current ml-0.5" viewBox="0 0 24 24">
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                  )}
-                </button>
-
-                {/* Hamburger Feature Button */}
-                <div className="relative">
-                  <button
-                    ref={menuButtonRef}
-                    onClick={() => setIsMenuOpen(!isMenuOpen)}
-                    className="p-1.5 rounded-lg text-zinc-400 hover:text-white transition-colors"
-                    title="Audio Menu"
-                  >
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                      <circle cx="12" cy="12" r="1" fill="currentColor" />
-                      <circle cx="12" cy="5" r="1" fill="currentColor" />
-                      <circle cx="12" cy="19" r="1" fill="currentColor" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-
+              {/* Next Track */}
+              <button
+                onClick={() => dispatch(nextTrack(queue))}
+                className="p-1.5 text-zinc-300 hover:text-white transition-transform active:scale-90"
+                title="Next Track"
+              >
+                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                  <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
+                </svg>
+              </button>
             </div>
-
-            {/* Bottom continuous scrub progress line */}
-            <div className="h-[2px] bg-white/[0.08] overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-violet-400 to-fuchsia-400 transition-all duration-150"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-
           </div>
         </div>
       )}
@@ -728,101 +566,8 @@ export default function PlayerBar({ queue }: { queue: Song[] }) {
       </nav>
 
       {/* ==================================================================== */}
-      {/* 3. HAMBURGER QUICK ACTIONS MODAL                                     */}
+      {/* 3. MODALS & DRAWERS                                                  */}
       {/* ==================================================================== */}
-      {isMenuOpen && (
-        <div
-          ref={menuRef}
-          className="fixed bottom-24 sm:bottom-22 right-4 sm:right-6 w-56 z-50 bg-[#12121e]/98 backdrop-blur-2xl border border-white/15 rounded-2xl shadow-2xl p-2 animate-in fade-in zoom-in-95 duration-200"
-        >
-          {/* Equalizer */}
-          <button
-            onClick={() => {
-              setIsMenuOpen(false);
-              dispatch(setEqualizerOpen(true));
-            }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-white/10 text-left transition-colors text-xs font-medium text-zinc-300 hover:text-white"
-          >
-            <svg className="w-4 h-4 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-            </svg>
-            <span>Equalizer</span>
-          </button>
-
-          {/* Sleep Timer */}
-          <button
-            onClick={() => {
-              setIsMenuOpen(false);
-              dispatch(setSleepTimerOpen(true));
-            }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-white/10 text-left transition-colors text-xs font-medium text-zinc-300 hover:text-white"
-          >
-            <svg className="w-4 h-4 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-            </svg>
-            <span>Sleep Timer</span>
-          </button>
-
-          {/* Add to Playlist */}
-          {currentTrack && (
-            <button
-              onClick={() => {
-                setIsMenuOpen(false);
-                setIsPlaylistModalOpen(true);
-              }}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-white/10 text-left transition-colors text-xs font-medium text-zinc-300 hover:text-white"
-            >
-              <svg className="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-              </svg>
-              <span>Add to Playlist</span>
-            </button>
-          )}
-
-          {/* Download Offline */}
-          {currentTrack && (
-            <button
-              onClick={handleToggleDownload}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-white/10 text-left transition-colors text-xs font-medium text-zinc-300 hover:text-white"
-            >
-              <svg className="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              <span>{isCurrentDownloaded ? 'Remove Download' : 'Download Offline'}</span>
-            </button>
-          )}
-
-          {/* View Queue */}
-          <button
-            onClick={() => {
-              setIsMenuOpen(false);
-              dispatch(setQueueOpen(true));
-            }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-white/10 text-left transition-colors text-xs font-medium text-zinc-300 hover:text-white"
-          >
-            <svg className="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h7" />
-            </svg>
-            <span>Play Queue</span>
-          </button>
-
-          {/* Hide / Don't play this song */}
-          {currentTrack && (
-            <button
-              onClick={() => {
-                setIsMenuOpen(false);
-                dispatch(hideTrack(currentTrack.id));
-              }}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-rose-500/15 text-left transition-colors text-xs font-medium text-rose-400 hover:text-rose-300"
-            >
-              <span className="text-sm">⊘</span>
-              <span>Hide This Song</span>
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* MODALS & DRAWERS */}
       <ExpandedPlayer queue={queue} audioRef={audioRef} />
       <QueueDrawer queue={queue} />
       <EqualizerModal />

@@ -41,9 +41,11 @@ interface PlayerState {
   isAutoplayEnabled: boolean;
   // Hidden Tracks (filter out from recommendations, autoplay, and views)
   hiddenTrackIds: string[];
+  // Session played history to prevent looping repetition
+  sessionPlayedIds: string[];
 }
 
-// Safely retrieve hidden tracks from localStorage in browser environment
+// Safely retrieve hidden tracks from localStorage
 function getStoredHiddenTracks(): string[] {
   if (typeof window === 'undefined') return [];
   try {
@@ -75,6 +77,7 @@ interface StoredSession {
   userQueue: Song[];
   recommendations: Song[];
   isAutoplayEnabled: boolean;
+  sessionPlayedIds: string[];
 }
 
 function getStoredPlayerSession(): Partial<StoredSession> | null {
@@ -102,6 +105,7 @@ function persistPlayerSession(state: PlayerState) {
       userQueue: state.userQueue,
       recommendations: state.recommendations,
       isAutoplayEnabled: state.isAutoplayEnabled,
+      sessionPlayedIds: state.sessionPlayedIds.slice(-50),
     };
     localStorage.setItem('aura_last_session', JSON.stringify(sessionData));
   } catch (e) {
@@ -139,6 +143,7 @@ const initialState: PlayerState = {
   recommendationsLoading: false,
   isAutoplayEnabled: savedSession?.isAutoplayEnabled ?? true,
   hiddenTrackIds: getStoredHiddenTracks(),
+  sessionPlayedIds: savedSession?.sessionPlayedIds ?? (savedSession?.currentTrack ? [savedSession.currentTrack.id] : []),
 };
 
 const playerSlice = createSlice({
@@ -149,8 +154,12 @@ const playerSlice = createSlice({
       const song = action.payload;
       if (state.hiddenTrackIds.includes(song.id)) return;
 
-      state.currentTrack = song;
-      state.currentTime = 0;
+      // Only restart position if choosing a different track
+      if (state.currentTrack?.id !== song.id) {
+        state.currentTrack = song;
+        state.currentTime = 0;
+        state.sessionPlayedIds.push(song.id);
+      }
       state.isPlaying = true;
 
       // Add to recently played (deduplicate & keep latest at front)
@@ -174,7 +183,6 @@ const playerSlice = createSlice({
     },
     setCurrentTime(state, action: PayloadAction<number>) {
       state.currentTime = action.payload;
-      // Persist time periodically without thrashing
     },
     setDuration(state, action: PayloadAction<number>) {
       state.duration = action.payload;
@@ -215,8 +223,9 @@ const playerSlice = createSlice({
     },
     // Recommendations & Sliding 10-Song Queue
     setRecommendations(state, action: PayloadAction<Song[]>) {
+      const currentId = state.currentTrack?.id;
       state.recommendations = action.payload
-        .filter((s) => !state.hiddenTrackIds.includes(s.id))
+        .filter((s) => s.id !== currentId && !state.hiddenTrackIds.includes(s.id))
         .slice(0, 10);
       state.recommendationsLoading = false;
       persistPlayerSession(state);
@@ -238,12 +247,13 @@ const playerSlice = createSlice({
       if (index < 0 || index >= state.recommendations.length) return;
 
       const chosenSong = state.recommendations[index];
-      // Remove all skipped songs before index and the chosen song itself
+      // Discard skipped songs before index and remove chosen song from queue
       state.recommendations = state.recommendations.slice(index + 1);
 
       state.currentTrack = chosenSong;
       state.currentTime = 0;
       state.isPlaying = true;
+      state.sessionPlayedIds.push(chosenSong.id);
 
       state.recentlyPlayed = [
         chosenSong,
@@ -298,13 +308,9 @@ const playerSlice = createSlice({
       persistHiddenTracks(state.hiddenTrackIds);
       persistPlayerSession(state);
     },
-    // Next / Previous Track with dynamic 10-song sequence & repetition fix
-    nextTrack(state, action: PayloadAction<Song[]>) {
-      const fallbackList = (action.payload || []).filter(
-        (s) => !state.hiddenTrackIds.includes(s.id)
-      );
-
-      // 1. If repeat mode is 'one', restart song
+    // Next / Previous Track with Dynamic Non-Looping Sequence
+    nextTrack(state, action: PayloadAction<Song[] | undefined>) {
+      // 1. If repeat mode is 'one', restart current track
       if (state.repeatMode === 'one' && state.currentTrack) {
         state.currentTime = 0;
         state.isPlaying = true;
@@ -312,12 +318,13 @@ const playerSlice = createSlice({
         return;
       }
 
-      // 2. If user queue has items, consume the next item
+      // 2. If user has manual queue, consume the next track
       if (state.userQueue.length > 0) {
         const nextFromQueue = state.userQueue.shift()!;
         state.currentTrack = nextFromQueue;
         state.currentTime = 0;
         state.isPlaying = true;
+        state.sessionPlayedIds.push(nextFromQueue.id);
         state.recentlyPlayed = [
           nextFromQueue,
           ...state.recentlyPlayed.filter((s) => s.id !== nextFromQueue.id),
@@ -326,78 +333,98 @@ const playerSlice = createSlice({
         return;
       }
 
-      // 3. Normal playlist sequence navigation
-      if (!state.currentTrack) return;
-
-      const idx = fallbackList.findIndex((t) => t.id === state.currentTrack?.id);
-
-      // If in a multi-song playlist and not at the end
-      if (state.isShuffle && fallbackList.length > 1) {
-        let randIdx = Math.floor(Math.random() * fallbackList.length);
-        if (randIdx === idx) randIdx = (randIdx + 1) % fallbackList.length;
-        state.currentTrack = fallbackList[randIdx];
-        state.currentTime = 0;
-        state.isPlaying = true;
-      } else if (idx !== -1 && idx < fallbackList.length - 1) {
-        state.currentTrack = fallbackList[idx + 1];
-        state.currentTime = 0;
-        state.isPlaying = true;
-      } else if (state.isAutoplayEnabled && state.recommendations.length > 0) {
-        // 4. Consume next song from sliding 10-song recommendation queue
+      // 3. Consume from the dynamic sliding 10-song recommendation queue (Primary Continuous Queue)
+      if (state.recommendations.length > 0) {
         const nextRecommended = state.recommendations.shift()!;
         state.currentTrack = nextRecommended;
         state.currentTime = 0;
         state.isPlaying = true;
-      } else if (state.repeatMode === 'all' && fallbackList.length > 1) {
-        state.currentTrack = fallbackList[0];
-        state.currentTime = 0;
-        state.isPlaying = true;
-      } else {
-        state.isPlaying = false;
-        state.currentTime = 0;
+        state.sessionPlayedIds.push(nextRecommended.id);
+        state.recentlyPlayed = [
+          nextRecommended,
+          ...state.recentlyPlayed.filter((s) => s.id !== nextRecommended.id && !state.hiddenTrackIds.includes(s.id)),
+        ].slice(0, 20);
         persistPlayerSession(state);
         return;
       }
 
-      if (state.currentTrack) {
-        state.recentlyPlayed = [
-          state.currentTrack,
-          ...state.recentlyPlayed.filter((s) => s.id !== state.currentTrack?.id && !state.hiddenTrackIds.includes(s.id)),
-        ].slice(0, 20);
-      }
-      persistPlayerSession(state);
-    },
-    previousTrack(state, action: PayloadAction<Song[]>) {
+      // 4. Fallback playlist navigation if no recommendations
       const fallbackList = (action.payload || []).filter(
         (s) => !state.hiddenTrackIds.includes(s.id)
       );
+
+      if (state.currentTrack && fallbackList.length > 0) {
+        const idx = fallbackList.findIndex((t) => t.id === state.currentTrack?.id);
+        if (state.isShuffle && fallbackList.length > 1) {
+          let randIdx = Math.floor(Math.random() * fallbackList.length);
+          if (randIdx === idx) randIdx = (randIdx + 1) % fallbackList.length;
+          state.currentTrack = fallbackList[randIdx];
+          state.currentTime = 0;
+          state.isPlaying = true;
+        } else if (idx !== -1 && idx < fallbackList.length - 1) {
+          state.currentTrack = fallbackList[idx + 1];
+          state.currentTime = 0;
+          state.isPlaying = true;
+        } else if (state.repeatMode === 'all' && fallbackList.length > 0) {
+          state.currentTrack = fallbackList[0];
+          state.currentTime = 0;
+          state.isPlaying = true;
+        } else {
+          state.isPlaying = false;
+          state.currentTime = 0;
+          persistPlayerSession(state);
+          return;
+        }
+
+        if (state.currentTrack) {
+          state.sessionPlayedIds.push(state.currentTrack.id);
+          state.recentlyPlayed = [
+            state.currentTrack,
+            ...state.recentlyPlayed.filter((s) => s.id !== state.currentTrack?.id && !state.hiddenTrackIds.includes(s.id)),
+          ].slice(0, 20);
+        }
+      }
+
+      persistPlayerSession(state);
+    },
+    previousTrack(state, action: PayloadAction<Song[] | undefined>) {
       if (!state.currentTrack) return;
 
+      // If more than 3 seconds in, restart the song
       if (state.currentTime > 3) {
         state.currentTime = 0;
         persistPlayerSession(state);
         return;
       }
 
-      if (fallbackList.length === 0) {
+      // If recently played has past tracks, step back
+      if (state.recentlyPlayed.length > 1) {
+        // [0] is current, [1] is previous
+        const prevSong = state.recentlyPlayed[1];
+        state.currentTrack = prevSong;
         state.currentTime = 0;
+        state.isPlaying = true;
+        state.recentlyPlayed = [
+          prevSong,
+          ...state.recentlyPlayed.filter((s) => s.id !== prevSong.id),
+        ].slice(0, 20);
         persistPlayerSession(state);
         return;
       }
 
-      const idx = fallbackList.findIndex((t) => t.id === state.currentTrack?.id);
+      const fallbackList = (action.payload || []).filter(
+        (s) => !state.hiddenTrackIds.includes(s.id)
+      );
 
-      if (state.isShuffle && fallbackList.length > 1) {
-        let randIdx = Math.floor(Math.random() * fallbackList.length);
-        if (randIdx === idx) randIdx = (randIdx - 1 + fallbackList.length) % fallbackList.length;
-        state.currentTrack = fallbackList[randIdx];
-      } else if (idx > 0) {
-        state.currentTrack = fallbackList[idx - 1];
-      } else if (fallbackList.length > 1) {
-        state.currentTrack = fallbackList[fallbackList.length - 1];
-      } else {
-        state.currentTime = 0;
+      if (fallbackList.length > 0) {
+        const idx = fallbackList.findIndex((t) => t.id === state.currentTrack?.id);
+        if (idx > 0) {
+          state.currentTrack = fallbackList[idx - 1];
+        } else if (state.repeatMode === 'all') {
+          state.currentTrack = fallbackList[fallbackList.length - 1];
+        }
       }
+
       state.currentTime = 0;
       state.isPlaying = true;
       persistPlayerSession(state);

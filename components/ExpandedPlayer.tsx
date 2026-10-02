@@ -1,6 +1,6 @@
 'use client';
 // components/ExpandedPlayer.tsx
-// Spotify-Grade Full-Screen Now Playing Card with Drag-Down Dismiss, Swipe-to-Skip, and Synchronized Lyrics.
+// Spotify & Echo-Grade Full-Screen Now Playing Card with Drag-Down Dismiss & Smooth Lyrics
 import { useState, useEffect, useRef } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
@@ -68,8 +68,15 @@ export default function ExpandedPlayer({
   const touchStartX = useRef<number | null>(null);
   const coverTouchStartX = useRef<number | null>(null);
 
-  const activeLyricRef = useRef<HTMLDivElement>(null);
+  const lyricsScrollRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Reset scroll to top when player opens
+  useEffect(() => {
+    if (isExpandedOpen && scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
+    }
+  }, [isExpandedOpen]);
 
   // Fetch lyrics & credits on song change
   useEffect(() => {
@@ -99,13 +106,17 @@ export default function ExpandedPlayer({
     setActiveLyricIndex(index);
   }, [currentTime, lyrics]);
 
-  // Auto-scroll active lyric
+  // Auto-scroll ONLY inside the lyrics container box (Never auto-scroll the main viewport)
   useEffect(() => {
-    if (activeLyricRef.current) {
-      activeLyricRef.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-      });
+    if (lyricsScrollRef.current && activeLyricIndex >= 0) {
+      const activeEl = lyricsScrollRef.current.children[activeLyricIndex] as HTMLElement;
+      if (activeEl) {
+        const top = activeEl.offsetTop - lyricsScrollRef.current.offsetTop - 60;
+        lyricsScrollRef.current.scrollTo({
+          top: Math.max(0, top),
+          behavior: 'smooth',
+        });
+      }
     }
   }, [activeLyricIndex]);
 
@@ -118,7 +129,7 @@ export default function ExpandedPlayer({
 
   // --- SWIPE DOWN TO DISMISS GESTURE ---
   function handleContainerTouchStart(e: React.TouchEvent) {
-    if (scrollContainerRef.current && scrollContainerRef.current.scrollTop > 10) {
+    if (scrollContainerRef.current && scrollContainerRef.current.scrollTop > 5) {
       touchStartY.current = null;
       return;
     }
@@ -144,7 +155,6 @@ export default function ExpandedPlayer({
   function handleContainerTouchEnd() {
     if (isDraggingDown) {
       if (dragY > 120) {
-        // Dismiss player
         dispatch(setExpandedOpen(false));
       }
       setDragY(0);
@@ -168,10 +178,8 @@ export default function ExpandedPlayer({
   function handleCoverTouchEnd() {
     if (coverTouchStartX.current !== null) {
       if (coverSwipeX < -60) {
-        // Swipe Left -> Next Track
         dispatch(nextTrack(queue));
       } else if (coverSwipeX > 60) {
-        // Swipe Right -> Previous Track
         dispatch(previousTrack(queue));
       }
     }
@@ -234,9 +242,9 @@ export default function ExpandedPlayer({
       }}
       className="fixed inset-0 z-[80] bg-[#070709] text-white overflow-y-auto select-none animate-in slide-in-from-bottom duration-300 pb-safe"
     >
-      {/* Background Soft Dynamic Ambient Gradient */}
+      {/* Dynamic Background Ambient Gradient */}
       <div
-        className="fixed inset-0 opacity-30 pointer-events-none blur-[140px] transition-all duration-700"
+        className="fixed inset-0 opacity-35 pointer-events-none blur-[140px] transition-all duration-700"
         style={{
           background: currentTrack.cover_url
             ? `radial-gradient(circle at 50% 20%, rgba(139, 92, 246, 0.4), rgba(217, 70, 239, 0.2), transparent 70%)`
@@ -248,13 +256,11 @@ export default function ExpandedPlayer({
         
         {/* 1. TOP HEADER & PULL BAR */}
         <div>
-          {/* Subtle drag handle indicator on mobile */}
           <div className="flex justify-center pt-2 pb-1">
             <div className="w-10 h-1 rounded-full bg-white/20" />
           </div>
 
           <div className="flex items-center justify-between py-3">
-            {/* Down Chevron Minimize Button */}
             <button
               onClick={() => dispatch(setExpandedOpen(false))}
               className="w-10 h-10 -ml-2 rounded-full flex items-center justify-center text-zinc-300 hover:text-white transition-transform active:scale-90"
@@ -265,7 +271,6 @@ export default function ExpandedPlayer({
               </svg>
             </button>
 
-            {/* Subtitle / Album */}
             <div className="text-center px-4 min-w-0 flex-1">
               <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
                 Playing from Album
@@ -275,7 +280,6 @@ export default function ExpandedPlayer({
               </p>
             </div>
 
-            {/* Quick Context Menu / Info */}
             <button
               onClick={() => setIsPlaylistModalOpen(true)}
               className="w-10 h-10 -mr-2 rounded-full flex items-center justify-center text-zinc-300 hover:text-white transition-transform active:scale-90"
@@ -288,7 +292,7 @@ export default function ExpandedPlayer({
           </div>
         </div>
 
-        {/* 2. HERO ALBUM ARTWORK (With Swipe-to-Skip Gesture) */}
+        {/* 2. HERO ALBUM ARTWORK */}
         <div className="flex flex-col items-center justify-center my-auto py-4">
           <div
             onTouchStart={handleCoverTouchStart}
@@ -328,7 +332,6 @@ export default function ExpandedPlayer({
               </p>
             </div>
 
-            {/* Favorite Heart Button */}
             <button
               onClick={() => {
                 const nextLiked = !currentTrack.is_liked;
@@ -386,9 +389,8 @@ export default function ExpandedPlayer({
             </div>
           </div>
 
-          {/* 5. SPOTIFY-GRADE MAIN CONTROLS ROW */}
+          {/* 5. CONTROLS ROW */}
           <div className="flex items-center justify-between px-2 mb-6">
-            {/* Shuffle */}
             <button
               onClick={() => dispatch(toggleShuffle())}
               className={`p-2 transition-colors relative ${
@@ -402,7 +404,6 @@ export default function ExpandedPlayer({
               {isShuffle && <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-violet-400" />}
             </button>
 
-            {/* Previous */}
             <button
               onClick={() => dispatch(previousTrack(queue))}
               className="p-2 text-white hover:text-zinc-300 transition-transform active:scale-90"
@@ -413,7 +414,6 @@ export default function ExpandedPlayer({
               </svg>
             </button>
 
-            {/* Big Play/Pause Button */}
             <button
               onClick={() => dispatch(togglePlay())}
               className="w-16 h-16 rounded-full bg-white text-black flex items-center justify-center shadow-2xl shadow-white/20 transition-transform active:scale-95 hover:scale-105 cursor-pointer"
@@ -429,7 +429,6 @@ export default function ExpandedPlayer({
               )}
             </button>
 
-            {/* Next */}
             <button
               onClick={() => dispatch(nextTrack(queue))}
               className="p-2 text-white hover:text-zinc-300 transition-transform active:scale-90"
@@ -440,7 +439,6 @@ export default function ExpandedPlayer({
               </svg>
             </button>
 
-            {/* Repeat */}
             <button
               onClick={() => dispatch(cycleRepeat())}
               className={`p-2 transition-colors relative ${
@@ -455,21 +453,18 @@ export default function ExpandedPlayer({
             </button>
           </div>
 
-          {/* 6. BOTTOM QUICK TOOLBAR (Equalizer, Sleep Timer, Queue, Offline) */}
+          {/* 6. BOTTOM TOOLBAR (Equalizer, Timer, Offline, Queue, Hide) */}
           <div className="flex items-center justify-between pt-2 border-t border-white/10 text-zinc-400">
-            {/* Equalizer */}
             <button
               onClick={() => dispatch(setEqualizerOpen(true))}
               className="flex items-center gap-1 text-xs hover:text-white transition-colors"
-              title="10-Band EQ"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
               </svg>
-              <span>Equalizer</span>
+              <span>EQ</span>
             </button>
 
-            {/* Sleep Timer */}
             <button
               onClick={() => dispatch(setSleepTimerOpen(true))}
               className={`flex items-center gap-1 text-xs transition-colors ${
@@ -482,7 +477,6 @@ export default function ExpandedPlayer({
               <span>{sleepTimer.active ? 'Timer On' : 'Timer'}</span>
             </button>
 
-            {/* Offline Download */}
             <button
               onClick={handleToggleDownload}
               disabled={isDownloading}
@@ -493,10 +487,9 @@ export default function ExpandedPlayer({
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
-              <span>{isOffline ? 'Downloaded' : 'Download'}</span>
+              <span>{isOffline ? 'Offline' : 'Download'}</span>
             </button>
 
-            {/* Queue */}
             <button
               onClick={() => dispatch(setQueueOpen(true))}
               className="flex items-center gap-1 text-xs hover:text-white transition-colors"
@@ -507,11 +500,8 @@ export default function ExpandedPlayer({
               <span>Queue</span>
             </button>
 
-            {/* Hide Track */}
             <button
-              onClick={() => {
-                dispatch(hideTrack(currentTrack.id));
-              }}
+              onClick={() => dispatch(hideTrack(currentTrack.id))}
               className="flex items-center gap-1 text-xs text-zinc-500 hover:text-rose-400 transition-colors"
               title="Hide this song"
             >
@@ -521,7 +511,7 @@ export default function ExpandedPlayer({
           </div>
         </div>
 
-        {/* 7. BELOW THE FOLD: SYNCHRONIZED LYRICS CARD & CREDITS */}
+        {/* 7. SYNCHRONIZED LYRICS & CREDITS (Strictly in its own scrollable sub-container) */}
         <div className="mt-8 pb-16">
           <div className="bg-[#14141e]/90 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-2xl">
             <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-400 mb-4 flex items-center justify-between">
@@ -530,7 +520,10 @@ export default function ExpandedPlayer({
             </h3>
 
             {lyrics.length > 0 ? (
-              <div className="space-y-4 max-h-72 overflow-y-auto pr-2">
+              <div
+                ref={lyricsScrollRef}
+                className="space-y-4 max-h-64 overflow-y-auto pr-2 custom-scrollbar"
+              >
                 {lyrics.map((line, idx) => {
                   const isActive = idx === activeLyricIndex;
                   const isPast = idx < activeLyricIndex;
@@ -538,7 +531,6 @@ export default function ExpandedPlayer({
                   return (
                     <p
                       key={idx}
-                      ref={isActive ? activeLyricRef : null}
                       onClick={() => handleSeekToLyric(line.time)}
                       className={`text-base sm:text-lg font-bold transition-all duration-300 cursor-pointer ${
                         isActive
