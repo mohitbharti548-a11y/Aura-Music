@@ -341,12 +341,24 @@ export default function Sidebar() {
           </div>
         </div>
 
-        {/* Subtle Footer */}
-        <div className="p-4 border-t border-white/[0.04]">
-          <div className="flex items-center gap-2 px-2 py-1 text-zinc-500 text-[11px]">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/50" />
-            <span className="font-normal text-zinc-400">Lossless Sound Active</span>
+        {/* Subtle Footer with Lossless Badge & In-App Update Trigger */}
+        <div className="p-4 border-t border-white/[0.04] space-y-2">
+          <div className="flex items-center justify-between px-1 text-zinc-500 text-[11px]">
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/50" />
+              <span className="font-normal text-zinc-400">Lossless Studio</span>
+            </div>
+            <span className="text-[10px] text-zinc-600 font-mono">v1.2.0</span>
           </div>
+
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('aura-check-update'))}
+            className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.08] text-zinc-400 hover:text-white text-[10px] font-medium transition-all active:scale-95 border border-white/[0.05]"
+            title="Check for newest features and live patches"
+          >
+            <span className="text-violet-400">✦</span>
+            <span>Check for Updates</span>
+          </button>
         </div>
       </aside>
     </>

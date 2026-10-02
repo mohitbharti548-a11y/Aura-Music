@@ -1,26 +1,71 @@
 'use client';
 // components/PwaRegister.tsx
-// Comprehensive PWA Manager: Install Banner + Automated In-App Live Update Detection
-import { useEffect, useState, useRef } from 'react';
+// Comprehensive PWA Manager: Install Banner + Automated & On-Demand In-App Live Update Detection
+import { useEffect, useState, useRef, useCallback } from 'react';
 
 export default function PwaRegister() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [checkingStatus, setCheckingStatus] = useState<string | null>(null);
   const waitingWorkerRef = useRef<ServiceWorker | null>(null);
+  const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
+
+  // Core update check logic
+  const checkLiveVersion = useCallback(async (isManual = false) => {
+    if (isManual) {
+      setCheckingStatus('Checking for latest updates...');
+    }
+
+    try {
+      // 1. Force check Service Worker registration update
+      if (registrationRef.current) {
+        await registrationRef.current.update().catch(() => {});
+      }
+
+      // 2. Query Version API with cache-busting
+      const res = await fetch(`/api/version?_t=${Date.now()}`, { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        const storedVersion = localStorage.getItem('aura_app_version');
+
+        if (!storedVersion) {
+          localStorage.setItem('aura_app_version', data.version);
+          if (isManual) {
+            setCheckingStatus(`Aura is running latest v${data.version}`);
+            setTimeout(() => setCheckingStatus(null), 3000);
+          }
+        } else if (storedVersion !== data.version) {
+          setUpdateAvailable(true);
+          if (isManual) setCheckingStatus(null);
+        } else {
+          if (isManual) {
+            setCheckingStatus(`Aura is up to date (v${data.version})`);
+            setTimeout(() => setCheckingStatus(null), 3000);
+          }
+        }
+      } else if (isManual) {
+        setCheckingStatus('Could not reach update server. Check network.');
+        setTimeout(() => setCheckingStatus(null), 3500);
+      }
+    } catch {
+      if (isManual) {
+        setCheckingStatus('Offline or connection error.');
+        setTimeout(() => setCheckingStatus(null), 3500);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
-
-    let registration: ServiceWorkerRegistration | null = null;
 
     // Helper: Register & attach update listeners
     function setupServiceWorker() {
       navigator.serviceWorker
         .register('/sw.js')
         .then((reg) => {
-          registration = reg;
+          registrationRef.current = reg;
           console.log('[Aura PWA] Service Worker registered:', reg.scope);
 
           // 1. Check if there is already a waiting service worker
@@ -43,11 +88,10 @@ export default function PwaRegister() {
             });
           });
 
-          // 3. Periodic update polling every 5 minutes
+          // 3. Periodic update polling every 3 minutes
           const intervalId = setInterval(() => {
-            reg.update().catch(() => {});
-            checkLiveVersion();
-          }, 5 * 60 * 1000);
+            checkLiveVersion(false);
+          }, 3 * 60 * 1000);
 
           return () => clearInterval(intervalId);
         })
@@ -55,30 +99,13 @@ export default function PwaRegister() {
           console.warn('[Aura PWA] Service Worker registration failed:', err);
         });
 
-      // Periodic check against live server version API
-      async function checkLiveVersion() {
-        try {
-          const res = await fetch('/api/version', { cache: 'no-store' });
-          if (!res.ok) return;
-          const data = await res.json();
-          const storedVersion = localStorage.getItem('aura_app_version');
-          if (!storedVersion) {
-            localStorage.setItem('aura_app_version', data.version);
-          } else if (storedVersion !== data.version) {
-            setUpdateAvailable(true);
-          }
-        } catch {
-          // Offline or network error - ignore
-        }
-      }
-
-      checkLiveVersion();
+      // Run initial check
+      checkLiveVersion(false);
 
       // 4. Check for updates on app focus / phone unlock
       function handleVisibilityChange() {
         if (document.visibilityState === 'visible') {
-          if (registration) registration.update().catch(() => {});
-          checkLiveVersion();
+          checkLiveVersion(false);
         }
       }
 
@@ -100,6 +127,13 @@ export default function PwaRegister() {
       window.addEventListener('load', setupServiceWorker);
     }
 
+    // Handle Manual Trigger Event
+    function handleManualCheck() {
+      checkLiveVersion(true);
+    }
+
+    window.addEventListener('aura-check-update', handleManualCheck);
+
     // Handle Android & Desktop PWA Install Prompt
     function handleBeforeInstall(e: Event) {
       e.preventDefault();
@@ -114,14 +148,15 @@ export default function PwaRegister() {
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+      window.removeEventListener('aura-check-update', handleManualCheck);
     };
-  }, []);
+  }, [checkLiveVersion]);
 
   // Trigger Immediate In-App Update
   async function handleApplyUpdate() {
     setIsUpdating(true);
     try {
-      const res = await fetch('/api/version', { cache: 'no-store' });
+      const res = await fetch(`/api/version?_t=${Date.now()}`, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         if (data.version) {
@@ -130,6 +165,16 @@ export default function PwaRegister() {
       }
     } catch {
       // Ignore
+    }
+
+    // Clear caches
+    if ('caches' in window) {
+      try {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      } catch {
+        // Ignore
+      }
     }
 
     if (waitingWorkerRef.current) {
@@ -157,9 +202,17 @@ export default function PwaRegister() {
 
   return (
     <>
-      {/* 1. Live In-App Update Toast */}
+      {/* 1. Manual Check Status Feedback Toast */}
+      {checkingStatus && !updateAvailable && (
+        <div className="fixed top-4 left-4 right-4 sm:left-auto sm:right-6 sm:w-80 z-[130] bg-[#12121e]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl p-3 flex items-center gap-3 animate-in slide-in-from-top duration-300">
+          <div className="w-2.5 h-2.5 rounded-full bg-violet-400 animate-ping shrink-0" />
+          <p className="text-xs font-medium text-zinc-200 truncate">{checkingStatus}</p>
+        </div>
+      )}
+
+      {/* 2. Live In-App Update Toast */}
       {updateAvailable && (
-        <div className="fixed top-4 left-4 right-4 sm:left-auto sm:right-6 sm:w-96 z-[120] bg-[#12121e]/95 backdrop-blur-2xl border border-violet-500/50 rounded-2xl shadow-2xl p-3.5 flex items-center justify-between gap-3 animate-in slide-in-from-top duration-300 ring-1 ring-violet-500/30">
+        <div className="fixed top-4 left-4 right-4 sm:left-auto sm:right-6 sm:w-96 z-[140] bg-[#12121e]/95 backdrop-blur-2xl border border-violet-500/50 rounded-2xl shadow-2xl p-3.5 flex items-center justify-between gap-3 animate-in slide-in-from-top duration-300 ring-1 ring-violet-500/30">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-violet-600 to-fuchsia-500 flex items-center justify-center shrink-0 shadow-lg shadow-violet-500/30 animate-pulse">
               <span className="text-xs text-white">✦</span>
@@ -189,7 +242,7 @@ export default function PwaRegister() {
         </div>
       )}
 
-      {/* 2. Mobile / Desktop PWA Install Banner */}
+      {/* 3. Mobile / Desktop PWA Install Banner */}
       {showInstallBanner && !updateAvailable && (
         <div className="fixed top-3 left-3 right-3 sm:left-auto sm:right-6 sm:w-88 z-[100] bg-[#12121c]/95 backdrop-blur-2xl border border-violet-500/30 rounded-2xl shadow-2xl p-3 flex items-center justify-between gap-3 animate-in slide-in-from-top duration-300">
           <div className="flex items-center gap-2.5 min-w-0">

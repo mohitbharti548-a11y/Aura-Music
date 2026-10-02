@@ -1,8 +1,9 @@
 // public/sw.js - Aura Music Progressive Web App Service Worker with In-App Auto-Update
-const CACHE_VERSION = 'aura-v' + Date.now();
+const CACHE_VERSION = 'aura-v1.2.0';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
+  '/logo.svg',
   '/icons/icon-192.svg',
   '/icons/icon-512.svg',
 ];
@@ -14,10 +15,11 @@ self.addEventListener('install', (event) => {
       return cache.addAll(STATIC_ASSETS);
     })
   );
-  // Allow manual skip waiting or automatic takeover
+  // Allow immediate activation when updated
+  self.skipWaiting();
 });
 
-// 2. Message: Listen for SKIP_WAITING from PwaRegister UI
+// 2. Message: Listen for SKIP_WAITING or check triggers from PwaRegister UI
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
@@ -56,7 +58,7 @@ self.addEventListener('fetch', (event) => {
 
   // Bypass cache for sw.js itself to ensure instant update discovery
   if (url.pathname === '/sw.js') {
-    event.respondWith(fetch(event.request));
+    event.respondWith(fetch(event.request, { cache: 'no-store' }));
     return;
   }
 
