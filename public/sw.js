@@ -1,5 +1,5 @@
 // public/sw.js - Aura Music Progressive Web App Service Worker with In-App Auto-Update
-const CACHE_VERSION = 'aura-v1.2.0';
+const CACHE_VERSION = 'aura-v1.3.0';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',

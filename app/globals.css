@@ -38,12 +38,18 @@ body {
   background: rgba(255, 255, 255, 0.25);
 }
 
-/* Hide any Netlify injected badges, drawers, or feedback widgets */
+/* Hide any Netlify injected badges, drawers, watermarks, or feedback widgets */
+a[href*="netlify.com"],
+a[href*="netlify.app"],
+[class*="netlify"],
+[id*="netlify"],
+[data-netlify],
+.netlify-badge,
+#netlify-badge,
+div[style*="position: fixed"]:has(a[href*="netlify"]),
+div:has(a[href*="netlify.com"]),
 iframe[data-netlify-identity],
 #netlify-drawer,
-div[id*="netlify"],
-div[class*="netlify-badge"],
-.netlify-badge,
 [data-netlify-drawer],
 div:has(> iframe[title*="Netlify"]) {
   display: none !important;
@@ -53,6 +59,8 @@ div:has(> iframe[title*="Netlify"]) {
   height: 0 !important;
   width: 0 !important;
   position: absolute !important;
+  left: -9999px !important;
+  top: -9999px !important;
   z-index: -9999 !important;
 }
 

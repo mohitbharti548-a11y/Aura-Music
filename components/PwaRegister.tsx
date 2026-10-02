@@ -1,6 +1,6 @@
 'use client';
 // components/PwaRegister.tsx
-// Comprehensive PWA & Update Manager: Minimal "What's New" Update Card Modal + Install Prompt
+// High-Fidelity In-App Update Card Modal (Matching Reference Image 2) + Automated Update Sync
 import { useEffect, useState, useRef, useCallback } from 'react';
 
 export default function PwaRegister() {
@@ -8,7 +8,6 @@ export default function PwaRegister() {
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [updateData, setUpdateData] = useState<any>(null);
   const [checkingStatus, setCheckingStatus] = useState<string | null>(null);
   const waitingWorkerRef = useRef<ServiceWorker | null>(null);
   const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
@@ -27,7 +26,6 @@ export default function PwaRegister() {
       const res = await fetch(`/api/version?_t=${Date.now()}`, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
-        setUpdateData(data);
         const storedVersion = localStorage.getItem('aura_app_version');
 
         if (!storedVersion) {
@@ -181,72 +179,84 @@ export default function PwaRegister() {
     <>
       {/* 1. Status Toast */}
       {checkingStatus && !updateAvailable && (
-        <div className="fixed top-4 left-4 right-4 sm:left-auto sm:right-6 sm:w-80 z-[140] bg-[#12121e]/98 backdrop-blur-2xl border border-white/15 rounded-2xl shadow-2xl p-3 flex items-center gap-3 animate-in slide-in-from-top duration-300">
-          <div className="w-2.5 h-2.5 rounded-full bg-violet-400 animate-ping shrink-0" />
+        <div className="fixed top-4 left-4 right-4 sm:left-auto sm:right-6 sm:w-80 z-[140] bg-[#1a1518]/98 backdrop-blur-2xl border border-white/15 rounded-2xl shadow-2xl p-3 flex items-center gap-3 animate-in slide-in-from-top duration-300">
+          <div className="w-2.5 h-2.5 rounded-full bg-rose-400 animate-ping shrink-0" />
           <p className="text-xs font-medium text-zinc-200 truncate">{checkingStatus}</p>
         </div>
       )}
 
-      {/* 2. MINIMAL UPDATE RELEASE CARD (Flash Card Notification) */}
+      {/* 2. MINIMAL UPDATE RELEASE CARD (Exact Match to Reference Image 2) */}
       {updateAvailable && (
-        <div className="fixed inset-0 z-[150] bg-black/70 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-250 select-none">
-          <div className="w-full max-w-sm bg-[#12121c]/98 border border-violet-500/40 rounded-3xl p-5 shadow-[0_20px_60px_rgba(139,92,246,0.25)] ring-1 ring-violet-500/20 animate-in zoom-in-95 duration-250 flex flex-col">
+        <div className="fixed inset-0 z-[150] bg-black/75 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200 select-none">
+          <div className="w-full max-w-sm bg-[#1e171b]/98 border border-white/10 rounded-[30px] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.85)] ring-1 ring-white/10 animate-in zoom-in-95 duration-200 flex flex-col">
             
-            {/* Card Header */}
-            <div className="flex items-center gap-3 mb-3.5">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-400 via-violet-500 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-violet-500/30 shrink-0">
-                <span className="text-sm font-bold text-white">✦</span>
+            {/* Top Pill Badge */}
+            <div className="self-start mb-3">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#3d262d] text-[#fca5a5] border border-[#f87171]/25 text-[11px] font-semibold">
+                <span className="text-xs">↻</span>
+                <span>Update available</span>
+              </span>
+            </div>
+
+            {/* Version Title */}
+            <h2 className="text-2xl font-bold text-white tracking-tight mb-4">
+              Version v1.3.0 is available
+            </h2>
+
+            {/* Changelog Card Box */}
+            <div className="bg-[#2a1f24]/90 border border-white/[0.06] rounded-2xl p-4 mb-5 space-y-3.5 text-xs text-zinc-300 max-h-72 overflow-y-auto custom-scrollbar">
+              <p className="text-sm font-semibold text-[#fca5a5]">Changelog</p>
+
+              {/* Fixes Section */}
+              <div className="space-y-1.5">
+                <p className="text-xs font-bold text-white uppercase tracking-wider">• Fixes</p>
+                <p className="pl-3 text-[11px] text-zinc-300 leading-relaxed">
+                  • Removed Netlify logo watermark completely across all screen views.
+                </p>
+                <p className="pl-3 text-[11px] text-zinc-300 leading-relaxed">
+                  • Fixed 10-song playlist loop — continuous new music generation without repetition.
+                </p>
+                <p className="pl-3 text-[11px] text-zinc-300 leading-relaxed">
+                  • Minimized playcard direct like/favorite & hide action buttons.
+                </p>
+                <p className="pl-3 text-[11px] text-zinc-300 leading-relaxed">
+                  • Eliminated auto-scrolling lyrics jump when opening expanded player.
+                </p>
               </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold text-white tracking-tight">
-                    Aura Update Ready
-                  </h3>
-                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-violet-500/20 text-violet-300 border border-violet-500/30">
-                    v{updateData?.version || '1.2.0'}
-                  </span>
-                </div>
-                <p className="text-[11px] text-zinc-400 mt-0.5">
-                  New studio enhancements & fixes are live
+
+              {/* Improvements Section */}
+              <div className="space-y-1.5 pt-1">
+                <p className="text-xs font-bold text-white uppercase tracking-wider">• Improvements</p>
+                <p className="pl-3 text-[11px] text-zinc-300 leading-relaxed">
+                  • Clean top header with mood & genre filter chips (Punjabi, Hindi, Romance, Workout).
+                </p>
+                <p className="pl-3 text-[11px] text-zinc-300 leading-relaxed">
+                  • Full Android Lock Screen & Notification Panel media controls.
+                </p>
+                <p className="pl-3 text-[11px] text-zinc-300 leading-relaxed">
+                  • Speed Dial 3x3 grid with top chart Punjabi, Hindi, and Global songs.
+                </p>
+                <p className="pl-3 text-[11px] text-zinc-300 leading-relaxed">
+                  • Dedicated Settings panel with 1-tap direct app updates.
                 </p>
               </div>
             </div>
 
-            {/* What's Fixed & Added Bullets */}
-            <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-3.5 mb-4 space-y-2 text-xs text-zinc-300">
-              <div className="flex items-start gap-2">
-                <span className="text-sky-400 mt-0.5 text-[11px]">✦</span>
-                <p><strong className="text-white font-semibold">Floating Pill Playcard:</strong> Spotify & Echo-grade sleek mini player with lock screen media controls.</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="text-violet-400 mt-0.5 text-[11px]">✦</span>
-                <p><strong className="text-white font-semibold">Speed Dial 3x3 Grid:</strong> High-res album cards with 1-tap playback and smooth pagination.</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="text-pink-400 mt-0.5 text-[11px]">✦</span>
-                <p><strong className="text-white font-semibold">Infinite Sliding Queue:</strong> Fixed track looping so next sequence never repeats previous tracks.</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="text-emerald-400 mt-0.5 text-[11px]">✦</span>
-                <p><strong className="text-white font-semibold">75% Queue Sheet:</strong> Optimized compact queue drawer and smooth lyrics scroll.</p>
-              </div>
-            </div>
-
             {/* Action Buttons */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-end gap-3 pt-1">
               <button
-                onClick={handleApplyUpdate}
-                disabled={isUpdating}
-                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 via-indigo-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white text-xs font-bold shadow-lg shadow-violet-600/30 transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+                onClick={() => setUpdateAvailable(false)}
+                className="px-4 py-2 text-xs font-medium text-zinc-400 hover:text-white transition-colors"
               >
-                {isUpdating ? 'Updating & Restarting...' : 'Update & Restart Now'}
+                Next time
               </button>
 
               <button
-                onClick={() => setUpdateAvailable(false)}
-                className="px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-xs font-medium transition-colors"
+                onClick={handleApplyUpdate}
+                disabled={isUpdating}
+                className="px-6 py-2.5 rounded-full bg-[#fca5a5] hover:bg-[#f87171] text-[#1a1518] text-xs font-bold shadow-lg shadow-rose-500/20 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
               >
-                Later
+                {isUpdating ? 'Updating...' : 'Update'}
               </button>
             </div>
 

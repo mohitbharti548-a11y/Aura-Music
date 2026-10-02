@@ -1,6 +1,6 @@
 'use client';
 // components/PlayerBar.tsx
-// Spotify & Echo-Grade Responsive Music Player with Floating Pill Mini-Player & Full Lockscreen MediaSession
+// Echo & Spotify-Grade Responsive Music Player with Floating Pill Mini-Player, Direct Like/Hide Buttons & Lockscreen MediaSession
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
@@ -50,13 +50,6 @@ import SleepTimerModal from './SleepTimerModal';
 import AddToPlaylistModal from './AddToPlaylistModal';
 import type { Song } from '../types/music';
 
-function formatTime(s: number): string {
-  if (!isFinite(s) || s < 0) return '0:00';
-  const m = Math.floor(s / 60);
-  const sec = Math.floor(s % 60);
-  return `${m}:${sec.toString().padStart(2, '0')}`;
-}
-
 export default function PlayerBar({ queue }: { queue: Song[] }) {
   const dispatch = useAppDispatch();
   const {
@@ -65,8 +58,6 @@ export default function PlayerBar({ queue }: { queue: Song[] }) {
     currentTime,
     duration,
     volume,
-    isShuffle,
-    repeatMode,
     sleepTimer,
     userQueue,
     offlineTrackIds,
@@ -87,9 +78,6 @@ export default function PlayerBar({ queue }: { queue: Song[] }) {
   const [isBuffering, setIsBuffering] = useState(false);
   const [isPlaylistModalOpen, setIsPlaylistModalOpen] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const menuButtonRef = useRef<HTMLButtonElement>(null);
 
   // Mini player swipe gesture state
   const [swipeX, setSwipeX] = useState(0);
@@ -122,7 +110,6 @@ export default function PlayerBar({ queue }: { queue: Song[] }) {
     const audio = audioRef.current;
     if (!audio || !currentTrack) return;
 
-    // Avoid reloading if already loaded this track ID
     if (loadedTrackIdRef.current === currentTrack.id) return;
     loadedTrackIdRef.current = currentTrack.id;
 
@@ -178,7 +165,7 @@ export default function PlayerBar({ queue }: { queue: Song[] }) {
         recordListeningEvent(currentTrack, 'play');
       }
 
-      // Initial seed recommendations if empty
+      // Initial seed recommendations if low
       if (recommendations.length < 5) {
         dispatch(setRecommendationsLoading(true));
         fetch('/api/recommendations', {
@@ -193,7 +180,7 @@ export default function PlayerBar({ queue }: { queue: Song[] }) {
           .then((r) => r.json())
           .then((data) => {
             if (data.recommendations && Array.isArray(data.recommendations)) {
-              dispatch(setRecommendations(data.recommendations));
+              dispatch(appendRecommendations(data.recommendations));
             } else {
               dispatch(setRecommendationsLoading(false));
             }
@@ -207,7 +194,7 @@ export default function PlayerBar({ queue }: { queue: Song[] }) {
     setupTrackAudio();
   }, [currentTrack?.id]);
 
-  // Periodic Sliding Queue Replenishment Check: Keep sliding window at 10 items
+  // Periodic Infinite Queue Replenishment Check: Keep queue constantly stocked with 10 upcoming tracks
   useEffect(() => {
     if (!currentTrack || recommendations.length >= 6 || !isPlaying) return;
 
@@ -313,22 +300,6 @@ export default function PlayerBar({ queue }: { queue: Song[] }) {
     setBuffered(ranges);
   }, []);
 
-  // Keyboard Shortcuts
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
-      if (e.code === 'Space') {
-        e.preventDefault();
-        dispatch(togglePlay());
-      } else if (e.code === 'KeyM') {
-        e.preventDefault();
-        dispatch(setVolume(volume === 0 ? 0.8 : 0));
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [dispatch, volume]);
-
   // --- SWIPE ON MINI PLAYER TO SKIP ---
   function handleMiniTouchStart(e: React.TouchEvent) {
     touchStartX.current = e.touches[0].clientX;
@@ -361,28 +332,23 @@ export default function PlayerBar({ queue }: { queue: Song[] }) {
     isSwiping.current = false;
   }
 
-  async function handleToggleDownload(e: React.MouseEvent) {
+  function handleToggleLikeDirect(e: React.MouseEvent) {
     e.stopPropagation();
     if (!currentTrack) return;
-    const isDownloaded = offlineTrackIds.includes(currentTrack.id);
-    if (isDownloaded) {
-      await removeDownloadedTrack(currentTrack.id);
-      dispatch(removeOfflineTrackId(currentTrack.id));
-    } else {
-      setIsDownloading(true);
-      try {
-        await downloadTrack(currentTrack);
-        dispatch(addOfflineTrackId(currentTrack.id));
-      } catch (err) {
-        console.error('Download error:', err);
-      } finally {
-        setIsDownloading(false);
-      }
-    }
+    const nextLiked = !currentTrack.is_liked;
+    dispatch(setLiked({ id: currentTrack.id, liked: nextLiked }));
+    dispatch(toggleLike({ id: currentTrack.id, currentlyLiked: !!currentTrack.is_liked }))
+      .unwrap()
+      .catch(() => {
+        dispatch(setLiked({ id: currentTrack.id, liked: !!currentTrack.is_liked }));
+      });
   }
 
-  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
-  const isCurrentDownloaded = currentTrack ? offlineTrackIds.includes(currentTrack.id) : false;
+  function handleHideTrackDirect(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!currentTrack) return;
+    dispatch(hideTrack(currentTrack.id));
+  }
 
   return (
     <>
@@ -404,7 +370,7 @@ export default function PlayerBar({ queue }: { queue: Song[] }) {
       />
 
       {/* ==================================================================== */}
-      {/* 1. FLOATING PILL MINI-PLAYCARD (Matching Reference Image)            */}
+      {/* 1. FLOATING PILL MINI-PLAYCARD WITH DIRECT LIKE & HIDE BUTTONS        */}
       {/* ==================================================================== */}
       {currentTrack && (
         <div
@@ -412,14 +378,14 @@ export default function PlayerBar({ queue }: { queue: Song[] }) {
             transform: `translateX(${swipeX}px)`,
             transition: isSwiping.current ? 'none' : 'transform 0.25s cubic-bezier(0.32, 0.72, 0, 1)',
           }}
-          className="fixed bottom-[60px] sm:bottom-4 left-3 right-3 sm:left-6 sm:right-6 max-w-lg mx-auto z-40 select-none"
+          className="fixed bottom-[60px] sm:bottom-4 left-3 right-3 sm:left-6 sm:right-6 max-w-xl mx-auto z-40 select-none"
         >
           <div
             onTouchStart={handleMiniTouchStart}
             onTouchMove={handleMiniTouchMove}
             onTouchEnd={handleMiniTouchEnd}
             onClick={() => dispatch(setExpandedOpen(true))}
-            className="bg-[#12121e]/95 backdrop-blur-3xl border border-white/15 rounded-full px-3 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.85)] flex items-center justify-between gap-3 cursor-pointer hover:border-white/25 transition-all group"
+            className="bg-[#12121e]/96 backdrop-blur-3xl border border-white/15 rounded-full px-3.5 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.85)] flex items-center justify-between gap-2.5 cursor-pointer hover:border-white/25 transition-all group"
           >
             {/* Left: Circular Spinning Artwork + Track Info */}
             <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -437,7 +403,6 @@ export default function PlayerBar({ queue }: { queue: Song[] }) {
                     ✦
                   </div>
                 )}
-                {/* Center hole for vinyl record aesthetic */}
                 <div className="absolute inset-0 m-auto w-2.5 h-2.5 rounded-full bg-[#12121e] border border-white/30" />
               </div>
 
@@ -451,15 +416,34 @@ export default function PlayerBar({ queue }: { queue: Song[] }) {
               </div>
             </div>
 
-            {/* Right: Minimal Playback Controls (Prev, Big Play/Pause, Next) */}
+            {/* Right: Direct Controls (Like, Prev, Play/Pause, Next, Hide) */}
             <div
               onClick={(e) => e.stopPropagation()}
-              className="flex items-center gap-2 sm:gap-3 shrink-0"
+              className="flex items-center gap-1.5 sm:gap-2.5 shrink-0"
             >
+              {/* Direct Like / Favorite Button */}
+              <button
+                onClick={handleToggleLikeDirect}
+                className="p-1.5 text-zinc-400 hover:text-white transition-transform active:scale-125"
+                title={currentTrack.is_liked ? 'Remove from favorites' : 'Add to favorites'}
+              >
+                <svg
+                  className={`w-5 h-5 transition-colors ${
+                    currentTrack.is_liked ? 'text-rose-500 fill-rose-500' : 'text-zinc-400'
+                  }`}
+                  fill={currentTrack.is_liked ? 'currentColor' : 'none'}
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+              </button>
+
               {/* Previous Track */}
               <button
                 onClick={() => dispatch(previousTrack(queue))}
-                className="p-1.5 text-zinc-300 hover:text-white transition-transform active:scale-90"
+                className="p-1.5 text-zinc-300 hover:text-white transition-transform active:scale-90 hidden sm:block"
                 title="Previous Track"
               >
                 <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
@@ -494,16 +478,24 @@ export default function PlayerBar({ queue }: { queue: Song[] }) {
                   <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
                 </svg>
               </button>
+
+              {/* Direct Hide / Remove Button */}
+              <button
+                onClick={handleHideTrackDirect}
+                className="p-1.5 rounded-full text-zinc-500 hover:text-rose-400 transition-colors"
+                title="Hide & skip this song"
+              >
+                <span className="text-sm font-bold">⊘</span>
+              </button>
             </div>
           </div>
         </div>
       )}
 
       {/* ==================================================================== */}
-      {/* 2. DEDICATED SPOTIFY MOBILE BOTTOM NAVIGATION BAR (<md)              */}
+      {/* 2. DEDICATED MOBILE BOTTOM NAVIGATION BAR (<md)                      */}
       {/* ==================================================================== */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#07070b]/96 backdrop-blur-2xl border-t border-white/[0.08] h-14 pb-safe flex items-center justify-around select-none">
-        {/* 1. Home */}
         <button
           onClick={() => dispatch(selectPlaylist(null))}
           className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
@@ -518,7 +510,6 @@ export default function PlayerBar({ queue }: { queue: Song[] }) {
           </span>
         </button>
 
-        {/* 2. Search */}
         <button
           onClick={() => dispatch(selectPlaylist('search'))}
           className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
@@ -534,7 +525,6 @@ export default function PlayerBar({ queue }: { queue: Song[] }) {
           </span>
         </button>
 
-        {/* 3. Discover */}
         <button
           onClick={() => dispatch(selectPlaylist('discover'))}
           className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
@@ -549,7 +539,6 @@ export default function PlayerBar({ queue }: { queue: Song[] }) {
           </span>
         </button>
 
-        {/* 4. Library */}
         <button
           onClick={() => dispatch(selectPlaylist('liked'))}
           className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
