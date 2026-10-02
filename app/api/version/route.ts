@@ -6,21 +6,24 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   const versionData = {
-    version: '1.3.0',
+    version: '1.4.0',
     appId: 'com.auramusic.app',
     appName: 'Aura Music',
     buildTime: new Date().toISOString(),
     fixes: [
-      'Removed Netlify logo watermark completely across all views',
-      'Fixed infinite 10-song playlist loop with continuous queue generation',
-      'Direct like/favorite & hide buttons on minimized playcard',
+      'Permanently suppressed Netlify badge watermark across all views',
+      'Fixed Android hardware back button to navigate hierarchically instead of closing app',
+      'Fixed background playback controls on Android Notification Panel and Lock Screen',
+      'Fixed continuous playlist queue replenishment without repeating 10-song loops',
       'Fixed lyrics auto-scroll jump when expanding player'
     ],
     improvements: [
-      'Clean top header with mood & genre filter chips (Punjabi, Hindi, Romance, Workout)',
-      'Full Android Lock Screen & Notification Panel media controls',
+      '120Hz ultra-fluid refresh rate motion and hardware-accelerated transitions',
+      'Modern disconnected-bar Aura logo with radiant soundwave arcs',
+      'Clean top header with mood & genre chips (Punjabi, Hindi, Romance, Workout)',
       'Speed Dial 3x3 grid with top Punjabi, Hindi, and Global charts',
-      'Dedicated Settings panel with 1-tap direct app updates'
+      '1-Tap direct like/favorite and hide buttons on floating mini-playcard',
+      'Comprehensive Settings panel with 1-tap instant in-app update'
     ]
   };
 

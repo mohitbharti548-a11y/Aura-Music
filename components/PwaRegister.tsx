@@ -200,7 +200,7 @@ export default function PwaRegister() {
 
             {/* Version Title */}
             <h2 className="text-2xl font-bold text-white tracking-tight mb-4">
-              Version v1.3.0 is available
+              Version v1.4.0 is available
             </h2>
 
             {/* Changelog Card Box */}
@@ -211,16 +211,19 @@ export default function PwaRegister() {
               <div className="space-y-1.5">
                 <p className="text-xs font-bold text-white uppercase tracking-wider">• Fixes</p>
                 <p className="pl-3 text-[11px] text-zinc-300 leading-relaxed">
-                  • Removed Netlify logo watermark completely across all screen views.
+                  • Permanently suppressed Netlify badge watermark across all screen views.
                 </p>
                 <p className="pl-3 text-[11px] text-zinc-300 leading-relaxed">
-                  • Fixed 10-song playlist loop — continuous new music generation without repetition.
+                  • Fixed Android hardware back button to navigate stack hierarchically.
                 </p>
                 <p className="pl-3 text-[11px] text-zinc-300 leading-relaxed">
-                  • Minimized playcard direct like/favorite & hide action buttons.
+                  • Full lock screen & notification panel background media controls.
                 </p>
                 <p className="pl-3 text-[11px] text-zinc-300 leading-relaxed">
-                  • Eliminated auto-scrolling lyrics jump when opening expanded player.
+                  • Continuous playlist queue generation without 10-song looping.
+                </p>
+                <p className="pl-3 text-[11px] text-zinc-300 leading-relaxed">
+                  • Minimized floating playcard quick like & hide direct buttons.
                 </p>
               </div>
 
@@ -228,13 +231,16 @@ export default function PwaRegister() {
               <div className="space-y-1.5 pt-1">
                 <p className="text-xs font-bold text-white uppercase tracking-wider">• Improvements</p>
                 <p className="pl-3 text-[11px] text-zinc-300 leading-relaxed">
-                  • Clean top header with mood & genre filter chips (Punjabi, Hindi, Romance, Workout).
+                  • 120Hz fluid motion & hardware-accelerated transitions throughout.
                 </p>
                 <p className="pl-3 text-[11px] text-zinc-300 leading-relaxed">
-                  • Full Android Lock Screen & Notification Panel media controls.
+                  • Modern disconnected-bar Aura logo with radiant soundwave rings.
                 </p>
                 <p className="pl-3 text-[11px] text-zinc-300 leading-relaxed">
-                  • Speed Dial 3x3 grid with top chart Punjabi, Hindi, and Global songs.
+                  • Clean header with mood & genre filter chips (Punjabi, Hindi, Romance, Workout).
+                </p>
+                <p className="pl-3 text-[11px] text-zinc-300 leading-relaxed">
+                  • Speed Dial 3x3 grid with top Punjabi, Hindi, and Global hit charts.
                 </p>
                 <p className="pl-3 text-[11px] text-zinc-300 leading-relaxed">
                   • Dedicated Settings panel with 1-tap direct app updates.
