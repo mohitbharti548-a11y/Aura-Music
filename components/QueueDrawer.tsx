@@ -1,6 +1,6 @@
 'use client';
 // components/QueueDrawer.tsx
-// Spotify-Grade Interactive Play Queue & Dynamic 30-Song Radio Drawer.
+// Spotify-Grade Interactive Play Queue & Dynamic 10-Song Radio Drawer with Sliding Replenishment.
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
   setTrack,
@@ -9,6 +9,9 @@ import {
   clearQueue,
   setQueueOpen,
   toggleAutoplay,
+  playTrackFromRecommendations,
+  appendRecommendations,
+  hideTrack,
 } from '../features/player/playerSlice';
 import type { Song } from '../types/music';
 
@@ -29,9 +32,42 @@ export default function QueueDrawer({ queue }: { queue: Song[] }) {
     recommendations,
     recommendationsLoading,
     isAutoplayEnabled,
+    hiddenTrackIds,
   } = useAppSelector((s) => s.player);
 
   if (!isOpen) return null;
+
+  async function handlePlayRecommendationAtIndex(index: number, song: Song) {
+    // 1. Play chosen song, dismiss skipped preceding songs (indices 0..index-1)
+    dispatch(playTrackFromRecommendations(index));
+
+    // 2. Replenish the sliding queue to maintain 10 songs
+    const replenishCount = index + 1;
+    try {
+      const res = await fetch('/api/recommendations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          seedSong: song,
+          hiddenTrackIds,
+          limit: replenishCount,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.recommendations)) {
+          dispatch(appendRecommendations(data.recommendations));
+        }
+      }
+    } catch (err) {
+      console.error('Failed to replenish recommendations:', err);
+    }
+  }
+
+  function handleHideSong(e: React.MouseEvent, songId: string) {
+    e.stopPropagation();
+    dispatch(hideTrack(songId));
+  }
 
   return (
     <div
@@ -48,10 +84,10 @@ export default function QueueDrawer({ queue }: { queue: Song[] }) {
             <span className="text-base text-violet-400 font-bold">≣</span>
             <div>
               <h3 className="text-sm sm:text-base font-bold text-white tracking-tight">
-                Play Queue & Radio
+                Play Queue & Recommendations
               </h3>
               <p className="text-[10px] text-zinc-400">
-                {userQueue.length} queued • {recommendations.length} recommended
+                {userQueue.length} queued • {recommendations.length}/10 in sliding radio
               </p>
             </div>
           </div>
@@ -67,7 +103,7 @@ export default function QueueDrawer({ queue }: { queue: Song[] }) {
               }`}
               title={
                 isAutoplayEnabled
-                  ? 'Infinite Autoplay is ON (Plays similar songs automatically)'
+                  ? 'Sequential Radio Autoplay is ON (Plays 10 recommended songs sequentially)'
                   : 'Autoplay is OFF'
               }
             >
@@ -126,9 +162,19 @@ export default function QueueDrawer({ queue }: { queue: Song[] }) {
                     </p>
                   </div>
                 </div>
-                <span className="text-xs text-zinc-500 font-mono tabular-nums">
-                  {formatDuration(currentTrack.duration_seconds)}
-                </span>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-zinc-500 font-mono tabular-nums">
+                    {formatDuration(currentTrack.duration_seconds)}
+                  </span>
+                  <button
+                    onClick={(e) => handleHideSong(e, currentTrack.id)}
+                    className="p-1.5 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 text-xs transition-colors"
+                    title="Hide this song (Don't recommend or play again)"
+                  >
+                    ⊘
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -177,16 +223,23 @@ export default function QueueDrawer({ queue }: { queue: Song[] }) {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0">
                       <span className="text-[10px] text-zinc-500 font-mono">
                         {formatDuration(song.duration_seconds)}
                       </span>
+                      <button
+                        onClick={(e) => handleHideSong(e, song.id)}
+                        className="w-6 h-6 rounded-md hover:bg-rose-500/20 text-zinc-500 hover:text-rose-400 text-xs flex items-center justify-center transition-colors"
+                        title="Hide this song"
+                      >
+                        ⊘
+                      </button>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           dispatch(removeFromQueue(song.id));
                         }}
-                        className="w-6 h-6 rounded-md hover:bg-white/10 text-zinc-500 hover:text-rose-400 text-xs flex items-center justify-center transition-colors"
+                        className="w-6 h-6 rounded-md hover:bg-white/10 text-zinc-500 hover:text-white text-xs flex items-center justify-center transition-colors"
                         title="Remove from queue"
                       >
                         ✕
@@ -198,17 +251,17 @@ export default function QueueDrawer({ queue }: { queue: Song[] }) {
             )}
           </div>
 
-          {/* 3. DYNAMIC SIMILAR RECOMMENDATIONS (UP TO 30 TRACKS) */}
+          {/* 3. DYNAMIC SLIDING 10-SONG RECOMMENDATION QUEUE */}
           <div>
             <div className="flex items-center justify-between mb-2 px-1">
               <div className="flex items-center gap-1.5">
                 <span className="text-xs text-indigo-400">✦</span>
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-indigo-300">
-                  Recommended Radio ({recommendations.length})
+                  Recommended Sequence ({recommendations.length}/10)
                 </p>
               </div>
               <span className="text-[10px] text-zinc-500">
-                {currentTrack ? `Based on ${currentTrack.title}` : 'Similar Vibe'}
+                {currentTrack ? `Matches ${currentTrack.artist}` : 'Dynamic Radio'}
               </span>
             </div>
 
@@ -226,7 +279,7 @@ export default function QueueDrawer({ queue }: { queue: Song[] }) {
               </div>
             ) : recommendations.length === 0 ? (
               <p className="text-xs text-zinc-600 px-3 py-3 bg-white/[0.02] rounded-xl text-center">
-                Play any song to load 30 similar track recommendations!
+                Play any track to generate 10 dynamic recommendations!
               </p>
             ) : (
               <div className="space-y-1">
@@ -235,10 +288,18 @@ export default function QueueDrawer({ queue }: { queue: Song[] }) {
                     key={`${song.id}-${i}`}
                     className="group flex items-center justify-between p-2 rounded-xl hover:bg-white/[0.06] transition-all border border-transparent hover:border-white/10"
                   >
+                    {/* Index + Click to Play with Skip Sequence */}
                     <div
-                      onClick={() => dispatch(setTrack(song))}
+                      onClick={() => handlePlayRecommendationAtIndex(i, song)}
                       className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer"
                     >
+                      <span className="text-[10px] text-zinc-500 font-mono w-4 text-center group-hover:hidden">
+                        {i + 1}
+                      </span>
+                      <span className="text-[10px] text-violet-400 font-bold w-4 text-center hidden group-hover:inline-block">
+                        ▶
+                      </span>
+
                       <div className="relative w-9 h-9 rounded-lg overflow-hidden bg-zinc-800 shrink-0 group-hover:scale-105 transition-transform">
                         {song.cover_url ? (
                           <img src={song.cover_url} alt="" className="w-full h-full object-cover" />
@@ -247,9 +308,6 @@ export default function QueueDrawer({ queue }: { queue: Song[] }) {
                             ✦
                           </div>
                         )}
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                          <span className="text-white text-[10px] font-bold">▶</span>
-                        </div>
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-medium text-zinc-200 group-hover:text-white truncate">
@@ -259,10 +317,20 @@ export default function QueueDrawer({ queue }: { queue: Song[] }) {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0">
                       <span className="text-[10px] text-zinc-500 font-mono">
                         {formatDuration(song.duration_seconds)}
                       </span>
+
+                      {/* 1-Tap Hide / Don't play song */}
+                      <button
+                        onClick={(e) => handleHideSong(e, song.id)}
+                        className="p-1 rounded-md hover:bg-rose-500/20 text-zinc-500 hover:text-rose-400 text-xs transition-colors"
+                        title="Hide this song (Remove and don't recommend again)"
+                      >
+                        ⊘
+                      </button>
+
                       {/* 1-Tap Add to Queue Button */}
                       <button
                         onClick={(e) => {
@@ -270,7 +338,7 @@ export default function QueueDrawer({ queue }: { queue: Song[] }) {
                           dispatch(addToQueue(song));
                         }}
                         className="p-1 rounded-md hover:bg-white/10 text-zinc-400 hover:text-violet-300 text-xs transition-colors"
-                        title="Add to queue"
+                        title="Add to manual queue"
                       >
                         +
                       </button>
@@ -289,7 +357,7 @@ export default function QueueDrawer({ queue }: { queue: Song[] }) {
               </p>
               <div className="space-y-1">
                 {queue
-                  .filter((s) => s.id !== currentTrack?.id)
+                  .filter((s) => s.id !== currentTrack?.id && !hiddenTrackIds.includes(s.id))
                   .slice(0, 6)
                   .map((song) => (
                     <div
@@ -315,9 +383,18 @@ export default function QueueDrawer({ queue }: { queue: Song[] }) {
                         </div>
                       </div>
 
-                      <span className="text-[10px] text-zinc-600 font-mono">
-                        {formatDuration(song.duration_seconds)}
-                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-[10px] text-zinc-600 font-mono">
+                          {formatDuration(song.duration_seconds)}
+                        </span>
+                        <button
+                          onClick={(e) => handleHideSong(e, song.id)}
+                          className="p-1 rounded-md hover:bg-rose-500/20 text-zinc-600 hover:text-rose-400 text-xs transition-colors"
+                          title="Hide this song"
+                        >
+                          ⊘
+                        </button>
+                      </div>
                     </div>
                   ))}
               </div>

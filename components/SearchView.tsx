@@ -8,6 +8,7 @@ import {
   addToQueue,
   addOfflineTrackId,
   removeOfflineTrackId,
+  hideTrack,
 } from '../features/player/playerSlice';
 import { fetchSongs, toggleLike, setLiked } from '../store/songsSlice';
 import { downloadTrack, removeDownloadedTrack } from '../lib/offline-storage';
@@ -484,6 +485,17 @@ export default function SearchView() {
                                     <span>{isDownloaded ? '✓' : '↓'}</span>
                                     <span>{isDownloaded ? 'Remove Offline' : 'Download Offline'}</span>
                                   </button>
+
+                                  <button
+                                    onClick={() => {
+                                      dispatch(hideTrack(song.id));
+                                      setActiveMenuSongId(null);
+                                    }}
+                                    className="w-full text-left px-3 py-1.5 rounded-xl text-xs text-rose-400 hover:bg-rose-500/20 flex items-center gap-2 transition-colors"
+                                  >
+                                    <span>⊘</span>
+                                    <span>Hide This Song</span>
+                                  </button>
                                 </div>
                               )}
                             </div>
@@ -611,6 +623,17 @@ export default function SearchView() {
                                   >
                                     <span>{isDownloaded ? '✓' : '↓'}</span>
                                     <span>{isDownloaded ? 'Remove Offline' : 'Download Offline'}</span>
+                                  </button>
+
+                                  <button
+                                    onClick={() => {
+                                      dispatch(hideTrack(song.id));
+                                      setActiveMenuSongId(null);
+                                    }}
+                                    className="w-full text-left px-3 py-1.5 rounded-xl text-xs text-rose-400 hover:bg-rose-500/20 flex items-center gap-2 transition-colors"
+                                  >
+                                    <span>⊘</span>
+                                    <span>Hide This Song</span>
                                   </button>
                                 </div>
                               )}

@@ -8,6 +8,7 @@ import {
   addToQueue,
   addOfflineTrackId,
   removeOfflineTrackId,
+  hideTrack,
 } from '../features/player/playerSlice';
 import { toggleLike, setLiked } from '../store/songsSlice';
 import { removeSongFromPlaylist } from '../store/playlistsSlice';
@@ -44,6 +45,7 @@ export default function SongList({ songs, loading, title, queue }: Props) {
   const currentTrack = useAppSelector((s) => s.player.currentTrack);
   const isPlaying = useAppSelector((s) => s.player.isPlaying);
   const offlineTrackIds = useAppSelector((s) => s.player.offlineTrackIds);
+  const hiddenTrackIds = useAppSelector((s) => s.player.hiddenTrackIds);
   const { selectedId } = useAppSelector((s) => s.playlists);
 
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -54,6 +56,7 @@ export default function SongList({ songs, loading, title, queue }: Props) {
 
   const filteredSongs = useMemo(() => {
     return songs.filter((song) => {
+      if (hiddenTrackIds.includes(song.id)) return false;
       const q = searchQuery.toLowerCase().trim();
       const matchesSearch =
         q === '' ||
@@ -67,7 +70,7 @@ export default function SongList({ songs, loading, title, queue }: Props) {
 
       return matchesSearch && matchesGenre;
     });
-  }, [songs, searchQuery, selectedGenre]);
+  }, [songs, searchQuery, selectedGenre, hiddenTrackIds]);
 
   const genres = useMemo(() => {
     const set = new Set<string>();
@@ -318,6 +321,17 @@ export default function SongList({ songs, loading, title, queue }: Props) {
                             <span>{isDownloaded ? 'Remove Offline' : 'Download Offline'}</span>
                           </button>
 
+                          <button
+                            onClick={() => {
+                              dispatch(hideTrack(song.id));
+                              setActiveMenuSongId(null);
+                            }}
+                            className="w-full text-left px-3 py-1.5 rounded-xl text-xs text-rose-400 hover:bg-rose-500/20 flex items-center gap-2 transition-colors"
+                          >
+                            <span>⊘</span>
+                            <span>Hide This Song</span>
+                          </button>
+
                           {selectedId && selectedId !== 'liked' && selectedId !== 'downloaded' && (
                             <button
                               onClick={() => handleRemoveFromCurrentPlaylist(song.id)}
@@ -484,6 +498,17 @@ export default function SongList({ songs, loading, title, queue }: Props) {
                         >
                           <span>{isDownloaded ? '✓' : '↓'}</span>
                           <span>{isDownloaded ? 'Remove Offline' : 'Download Offline'}</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            dispatch(hideTrack(song.id));
+                            setActiveMenuSongId(null);
+                          }}
+                          className="w-full text-left px-3 py-1.5 rounded-xl text-xs text-rose-400 hover:bg-rose-500/20 flex items-center gap-2 transition-colors"
+                        >
+                          <span>⊘</span>
+                          <span>Hide This Song</span>
                         </button>
 
                         {selectedId && selectedId !== 'liked' && selectedId !== 'downloaded' && (

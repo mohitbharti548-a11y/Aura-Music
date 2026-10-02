@@ -5,7 +5,10 @@ import type { Song } from '@/types/music';
 
 export async function POST(request: NextRequest) {
   try {
-    const seedSong = (await request.json()) as Song;
+    const body = await request.json();
+    const seedSong: Song = body.seedSong || body;
+    const hiddenTrackIds: string[] = Array.isArray(body.hiddenTrackIds) ? body.hiddenTrackIds : [];
+    const limit: number = typeof body.limit === 'number' ? body.limit : 10;
 
     if (!seedSong || !seedSong.title || !seedSong.artist) {
       return Response.json(
@@ -14,7 +17,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const recommendations = await generateSongRecommendations(seedSong, 30);
+    const recommendations = await generateSongRecommendations(seedSong, limit, hiddenTrackIds);
 
     return Response.json({
       seed: seedSong,

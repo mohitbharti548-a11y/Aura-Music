@@ -1,6 +1,6 @@
 'use client';
 // components/ExpandedPlayer.tsx
-// Full-Screen / Expanded Now Playing Screen with Synchronized Lyrics & Spotify-Style Credits.
+// Spotify-Grade Full-Screen Now Playing Card with Drag-Down Dismiss, Swipe-to-Skip, and Synchronized Lyrics.
 import { useState, useEffect, useRef } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
@@ -11,12 +11,12 @@ import {
   previousTrack,
   toggleShuffle,
   cycleRepeat,
-  setVolume,
   setQueueOpen,
   setEqualizerOpen,
   setSleepTimerOpen,
   addOfflineTrackId,
   removeOfflineTrackId,
+  hideTrack,
 } from '../features/player/playerSlice';
 import { toggleLike, setLiked } from '../store/songsSlice';
 import { fetchLyrics, LyricLine } from '../lib/lyrics-service';
@@ -45,7 +45,6 @@ export default function ExpandedPlayer({
     isPlaying,
     currentTime,
     duration,
-    volume,
     isShuffle,
     repeatMode,
     isExpandedOpen,
@@ -58,7 +57,16 @@ export default function ExpandedPlayer({
   const [activeLyricIndex, setActiveLyricIndex] = useState<number>(-1);
   const [isPlaylistModalOpen, setIsPlaylistModalOpen] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [isSeeking, setIsSeeking] = useState(false);
+  const [seekTime, setSeekTime] = useState(0);
+
+  // Gesture State
+  const [dragY, setDragY] = useState(0);
+  const [isDraggingDown, setIsDraggingDown] = useState(false);
+  const [coverSwipeX, setCoverSwipeX] = useState(0);
+  const touchStartY = useRef<number | null>(null);
+  const touchStartX = useRef<number | null>(null);
+  const coverTouchStartX = useRef<number | null>(null);
 
   const activeLyricRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -91,10 +99,85 @@ export default function ExpandedPlayer({
     setActiveLyricIndex(index);
   }, [currentTime, lyrics]);
 
+  // Auto-scroll active lyric
+  useEffect(() => {
+    if (activeLyricRef.current) {
+      activeLyricRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }
+  }, [activeLyricIndex]);
+
   if (!isExpandedOpen || !currentTrack) return null;
 
   const isOffline = offlineTrackIds.includes(currentTrack.id);
-  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const displayCurrentTime = isSeeking ? seekTime : currentTime;
+  const progress = duration > 0 ? (displayCurrentTime / duration) * 100 : 0;
+  const remainingTime = duration > 0 ? Math.max(duration - displayCurrentTime, 0) : 0;
+
+  // --- SWIPE DOWN TO DISMISS GESTURE ---
+  function handleContainerTouchStart(e: React.TouchEvent) {
+    if (scrollContainerRef.current && scrollContainerRef.current.scrollTop > 10) {
+      touchStartY.current = null;
+      return;
+    }
+    touchStartY.current = e.touches[0].clientY;
+    touchStartX.current = e.touches[0].clientX;
+    setIsDraggingDown(false);
+  }
+
+  function handleContainerTouchMove(e: React.TouchEvent) {
+    if (touchStartY.current === null || touchStartX.current === null) return;
+    const currentY = e.touches[0].clientY;
+    const currentX = e.touches[0].clientX;
+    const deltaY = currentY - touchStartY.current;
+    const deltaX = currentX - touchStartX.current;
+
+    // Only trigger drag down if dragging vertically downwards from top
+    if (deltaY > 10 && Math.abs(deltaY) > Math.abs(deltaX) * 1.2) {
+      setIsDraggingDown(true);
+      setDragY(deltaY);
+    }
+  }
+
+  function handleContainerTouchEnd() {
+    if (isDraggingDown) {
+      if (dragY > 120) {
+        // Dismiss player
+        dispatch(setExpandedOpen(false));
+      }
+      setDragY(0);
+      setIsDraggingDown(false);
+    }
+    touchStartY.current = null;
+    touchStartX.current = null;
+  }
+
+  // --- SWIPE LEFT / RIGHT ON ALBUM ART TO SKIP ---
+  function handleCoverTouchStart(e: React.TouchEvent) {
+    coverTouchStartX.current = e.touches[0].clientX;
+  }
+
+  function handleCoverTouchMove(e: React.TouchEvent) {
+    if (coverTouchStartX.current === null) return;
+    const deltaX = e.touches[0].clientX - coverTouchStartX.current;
+    setCoverSwipeX(deltaX);
+  }
+
+  function handleCoverTouchEnd() {
+    if (coverTouchStartX.current !== null) {
+      if (coverSwipeX < -60) {
+        // Swipe Left -> Next Track
+        dispatch(nextTrack(queue));
+      } else if (coverSwipeX > 60) {
+        // Swipe Right -> Previous Track
+        dispatch(previousTrack(queue));
+      }
+    }
+    setCoverSwipeX(0);
+    coverTouchStartX.current = null;
+  }
 
   async function handleToggleDownload() {
     if (!currentTrack) return;
@@ -103,16 +186,32 @@ export default function ExpandedPlayer({
       dispatch(removeOfflineTrackId(currentTrack.id));
     } else {
       setIsDownloading(true);
-      setDownloadProgress(10);
       try {
-        await downloadTrack(currentTrack, (p) => setDownloadProgress(p));
+        await downloadTrack(currentTrack);
         dispatch(addOfflineTrackId(currentTrack.id));
       } catch (err) {
         console.error('Download error:', err);
       } finally {
         setIsDownloading(false);
-        setDownloadProgress(0);
       }
+    }
+  }
+
+  function handleSeekChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const val = Number(e.target.value);
+    setSeekTime(val);
+  }
+
+  function handleSeekStart() {
+    setIsSeeking(true);
+  }
+
+  function handleSeekEnd(e: React.MouseEvent<HTMLInputElement> | React.TouchEvent<HTMLInputElement>) {
+    setIsSeeking(false);
+    const val = Number((e.target as HTMLInputElement).value);
+    dispatch(setCurrentTime(val));
+    if (audioRef.current) {
+      audioRef.current.currentTime = val;
     }
   }
 
@@ -126,394 +225,376 @@ export default function ExpandedPlayer({
   return (
     <div
       ref={scrollContainerRef}
-      className="fixed inset-0 z-[80] bg-[#07070a] text-white overflow-y-auto select-none animate-in slide-in-from-bottom-6 duration-300 scroll-smooth"
+      onTouchStart={handleContainerTouchStart}
+      onTouchMove={handleContainerTouchMove}
+      onTouchEnd={handleContainerTouchEnd}
+      style={{
+        transform: `translateY(${Math.max(dragY, 0)}px)`,
+        transition: isDraggingDown ? 'none' : 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)',
+      }}
+      className="fixed inset-0 z-[80] bg-[#070709] text-white overflow-y-auto select-none animate-in slide-in-from-bottom duration-300 pb-safe"
     >
-      {/* Dynamic Ambient Cover Glow */}
+      {/* Background Soft Dynamic Ambient Gradient */}
       <div
-        className="fixed inset-0 opacity-25 pointer-events-none blur-[120px] transition-all duration-700"
+        className="fixed inset-0 opacity-30 pointer-events-none blur-[140px] transition-all duration-700"
         style={{
           background: currentTrack.cover_url
-            ? `radial-gradient(circle at 50% 30%, rgba(139, 92, 246, 0.45), rgba(217, 70, 239, 0.25), transparent 70%)`
-            : `radial-gradient(circle at 50% 30%, rgba(99, 102, 241, 0.4), transparent 70%)`,
+            ? `radial-gradient(circle at 50% 20%, rgba(139, 92, 246, 0.4), rgba(217, 70, 239, 0.2), transparent 70%)`
+            : `radial-gradient(circle at 50% 20%, rgba(99, 102, 241, 0.35), transparent 70%)`,
         }}
       />
 
-      <div className="relative z-10 max-w-4xl mx-auto px-6 py-8 min-h-screen flex flex-col justify-between">
-        {/* 1. TOP HEADER & QUICK TOOLBAR */}
-        <div className="flex items-center justify-between pb-6">
-          <button
-            onClick={() => dispatch(setExpandedOpen(false))}
-            className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm transition-all hover:scale-105 active:scale-95"
-            title="Minimize (Close)"
-          >
-            ▼
-          </button>
-
-          <div className="text-center">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">
-              Playing from Library
-            </p>
-            <p className="text-xs font-bold text-white truncate max-w-[200px] sm:max-w-md">
-              {currentTrack.album ?? 'Aura Music Master'}
-            </p>
+      <div className="relative z-10 max-w-lg mx-auto px-5 sm:px-6 pt-safe min-h-screen flex flex-col justify-between">
+        
+        {/* 1. TOP HEADER & PULL BAR */}
+        <div>
+          {/* Subtle drag handle indicator on mobile */}
+          <div className="flex justify-center pt-2 pb-1">
+            <div className="w-10 h-1 rounded-full bg-white/20" />
           </div>
 
-          {/* Quick Toolbar */}
-          <div className="flex items-center gap-2">
-            {/* Sleep timer button */}
+          <div className="flex items-center justify-between py-3">
+            {/* Down Chevron Minimize Button */}
             <button
-              onClick={() => dispatch(setSleepTimerOpen(true))}
-              className={`w-9 h-9 rounded-full border flex items-center justify-center text-xs transition-all ${
-                sleepTimer.active
-                  ? 'bg-violet-600 border-violet-400 text-white shadow-md shadow-violet-600/40'
-                  : 'bg-white/5 hover:bg-white/15 border-white/10 text-zinc-300 hover:text-white'
-              }`}
-              title="Sleep Timer"
+              onClick={() => dispatch(setExpandedOpen(false))}
+              className="w-10 h-10 -ml-2 rounded-full flex items-center justify-center text-zinc-300 hover:text-white transition-transform active:scale-90"
+              title="Close"
             >
-              🌙
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
             </button>
 
-            {/* Equalizer button */}
-            <button
-              onClick={() => dispatch(setEqualizerOpen(true))}
-              className="w-9 h-9 rounded-full bg-white/5 hover:bg-white/15 border border-white/10 text-zinc-300 hover:text-white flex items-center justify-center text-xs transition-all"
-              title="Audio Equalizer"
-            >
-              🎚
-            </button>
+            {/* Subtitle / Album */}
+            <div className="text-center px-4 min-w-0 flex-1">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+                Playing from Album
+              </p>
+              <p className="text-xs font-semibold text-white truncate mt-0.5">
+                {currentTrack.album ?? 'Aura Studio Master'}
+              </p>
+            </div>
 
-            {/* Queue button */}
+            {/* Quick Context Menu / Info */}
             <button
-              onClick={() => dispatch(setQueueOpen(true))}
-              className="w-9 h-9 rounded-full bg-white/5 hover:bg-white/15 border border-white/10 text-zinc-300 hover:text-white flex items-center justify-center text-xs transition-all"
-              title="View Queue"
+              onClick={() => setIsPlaylistModalOpen(true)}
+              className="w-10 h-10 -mr-2 rounded-full flex items-center justify-center text-zinc-300 hover:text-white transition-transform active:scale-90"
+              title="Add to Playlist"
             >
-              ≣
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
             </button>
           </div>
         </div>
 
-        {/* 2. MAIN HERO PLAYBACK STAGE */}
-        <div className="flex flex-col items-center justify-center my-auto py-8">
-          {/* Vinyl / Cover Art Container */}
-          <div className="relative w-64 h-64 sm:w-80 sm:h-80 rounded-3xl overflow-hidden shadow-2xl shadow-black/90 border border-white/15 group">
+        {/* 2. HERO ALBUM ARTWORK (With Swipe-to-Skip Gesture) */}
+        <div className="flex flex-col items-center justify-center my-auto py-4">
+          <div
+            onTouchStart={handleCoverTouchStart}
+            onTouchMove={handleCoverTouchMove}
+            onTouchEnd={handleCoverTouchEnd}
+            style={{
+              transform: `translateX(${coverSwipeX}px) rotate(${coverSwipeX * 0.04}deg)`,
+              transition: coverTouchStartX.current !== null ? 'none' : 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
+            }}
+            className="relative w-full aspect-square max-w-[340px] rounded-2xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.85)] border border-white/10 group cursor-grab active:cursor-grabbing"
+          >
             {currentTrack.cover_url ? (
               <img
                 src={currentTrack.cover_url}
                 alt={currentTrack.title}
-                className={`w-full h-full object-cover transition-transform duration-700 ${
-                  isPlaying ? 'scale-105' : 'scale-100'
+                className={`w-full h-full object-cover transition-transform duration-500 ${
+                  isPlaying ? 'scale-100' : 'scale-[0.98] opacity-90'
                 }`}
               />
             ) : (
-              <div className="w-full h-full bg-gradient-to-tr from-violet-700 via-purple-900 to-indigo-950 flex items-center justify-center text-5xl">
+              <div className="w-full h-full bg-gradient-to-tr from-violet-800 to-indigo-950 flex items-center justify-center text-5xl">
                 ✦
               </div>
             )}
-
-            {/* Overlay equalizers on playing */}
-            {isPlaying && (
-              <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/15 flex items-center gap-1">
-                <span className="w-1 h-3 bg-violet-400 rounded-full animate-eq-1" />
-                <span className="w-1 h-5 bg-fuchsia-400 rounded-full animate-eq-2" />
-                <span className="w-1 h-3 bg-cyan-400 rounded-full animate-eq-3" />
-                <span className="text-[10px] font-semibold text-white ml-1">PLAYING</span>
-              </div>
-            )}
           </div>
+        </div>
 
-          {/* Track Meta & Like */}
-          <div className="w-full max-w-md flex items-center justify-between mt-8">
+        {/* 3. TRACK INFO & LIKE HEART */}
+        <div className="w-full pt-2 pb-4">
+          <div className="flex items-center justify-between mb-4">
             <div className="min-w-0 pr-4">
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight truncate">
+              <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight truncate">
                 {currentTrack.title}
               </h1>
-              <p className="text-sm sm:text-base text-zinc-400 font-medium truncate mt-1">
+              <p className="text-sm text-zinc-400 font-medium truncate mt-0.5">
                 {currentTrack.artist}
               </p>
             </div>
 
-            <div className="flex items-center gap-3 shrink-0">
-              {/* Add to Playlist button */}
-              <button
-                onClick={() => setIsPlaylistModalOpen(true)}
-                className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/15 border border-white/10 text-zinc-300 hover:text-white flex items-center justify-center text-base transition-all"
-                title="Add to Playlist"
-              >
-                +
-              </button>
-
-              {/* Download / Offline button */}
-              <button
-                onClick={handleToggleDownload}
-                disabled={isDownloading}
-                className={`w-10 h-10 rounded-full border flex items-center justify-center text-sm transition-all ${
-                  isOffline
-                    ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400'
-                    : 'bg-white/5 hover:bg-white/15 border-white/10 text-zinc-300 hover:text-white'
+            {/* Favorite Heart Button */}
+            <button
+              onClick={() => {
+                const nextLiked = !currentTrack.is_liked;
+                dispatch(setLiked({ id: currentTrack.id, liked: nextLiked }));
+                dispatch(toggleLike({ id: currentTrack.id, currentlyLiked: !!currentTrack.is_liked }))
+                  .unwrap()
+                  .catch(() => {
+                    dispatch(setLiked({ id: currentTrack.id, liked: !!currentTrack.is_liked }));
+                  });
+              }}
+              className="p-2 -mr-2 text-zinc-400 hover:text-white transition-transform active:scale-125"
+            >
+              <svg
+                className={`w-6 h-6 transition-colors ${
+                  currentTrack.is_liked ? 'text-rose-500 fill-rose-500' : 'text-zinc-400'
                 }`}
-                title={isOffline ? 'Downloaded for Offline Listen' : 'Download Offline'}
+                fill={currentTrack.is_liked ? 'currentColor' : 'none'}
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth="2"
               >
-                {isDownloading ? (
-                  <span className="text-[10px] font-mono">{downloadProgress}%</span>
-                ) : isOffline ? (
-                  '✓'
-                ) : (
-                  '↓'
-                )}
-              </button>
-
-              {/* Like Heart */}
-              <button
-                onClick={() => {
-                  const nextLiked = !currentTrack.is_liked;
-                  dispatch(setLiked({ id: currentTrack.id, liked: nextLiked }));
-                  dispatch(toggleLike({ id: currentTrack.id, currentlyLiked: !!currentTrack.is_liked }))
-                    .unwrap()
-                    .catch(() => {
-                      dispatch(setLiked({ id: currentTrack.id, liked: !!currentTrack.is_liked }));
-                    });
-                }}
-                className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/15 border border-white/10 flex items-center justify-center text-lg transition-transform hover:scale-110 active:scale-90"
-              >
-                {currentTrack.is_liked ? (
-                  <span className="text-rose-500">♥</span>
-                ) : (
-                  <span className="text-zinc-400 hover:text-white">♡</span>
-                )}
-              </button>
-            </div>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+            </button>
           </div>
 
-          {/* Scrub Bar */}
-          <div className="w-full max-w-md mt-6">
-            <div className="relative h-2 bg-white/10 rounded-full overflow-hidden cursor-pointer group">
-              <div
-                className="absolute inset-y-0 bg-gradient-to-r from-violet-500 via-fuchsia-400 to-white rounded-full transition-all"
-                style={{ width: `${progress}%` }}
-              />
+          {/* 4. SCRUBBER TIMELINE */}
+          <div className="mb-4">
+            <div className="relative group/scrub py-2 cursor-pointer">
+              <div className="w-full h-1 bg-white/20 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-white group-hover/scrub:bg-violet-400 rounded-full transition-colors"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+
               <input
                 type="range"
                 min={0}
-                max={duration || 0}
-                value={currentTime}
+                max={duration || 100}
                 step={0.1}
-                onChange={(e) => {
-                  const t = Number(e.target.value);
-                  dispatch(setCurrentTime(t));
-                  if (audioRef.current) audioRef.current.currentTime = t;
-                }}
+                value={displayCurrentTime}
+                onMouseDown={handleSeekStart}
+                onTouchStart={handleSeekStart}
+                onChange={handleSeekChange}
+                onMouseUp={handleSeekEnd}
+                onTouchEnd={handleSeekEnd}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               />
             </div>
 
-            <div className="flex justify-between text-xs font-mono text-zinc-400 mt-2">
-              <span>{formatTime(currentTime)}</span>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] uppercase font-bold text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded border border-violet-500/20">
-                  {currentTrack.audio_format?.toUpperCase() || 'LOSSLESS'}
-                </span>
-                <span>{formatTime(duration)}</span>
-              </div>
+            <div className="flex justify-between text-[11px] font-medium text-zinc-400">
+              <span>{formatTime(displayCurrentTime)}</span>
+              <span>-{formatTime(remainingTime)}</span>
             </div>
           </div>
 
-          {/* Playback Controls */}
-          <div className="w-full max-w-md flex items-center justify-between mt-6 px-4">
+          {/* 5. SPOTIFY-GRADE MAIN CONTROLS ROW */}
+          <div className="flex items-center justify-between px-2 mb-6">
+            {/* Shuffle */}
             <button
               onClick={() => dispatch(toggleShuffle())}
-              className={`text-sm transition-colors ${
-                isShuffle ? 'text-violet-400 font-bold' : 'text-zinc-500 hover:text-zinc-300'
+              className={`p-2 transition-colors relative ${
+                isShuffle ? 'text-violet-400 font-bold' : 'text-zinc-400 hover:text-white'
               }`}
+              title="Shuffle"
             >
-              ⇄
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+              </svg>
+              {isShuffle && <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-violet-400" />}
             </button>
 
+            {/* Previous */}
             <button
               onClick={() => dispatch(previousTrack(queue))}
-              className="text-zinc-400 hover:text-white text-xl transition-transform active:scale-90"
+              className="p-2 text-white hover:text-zinc-300 transition-transform active:scale-90"
+              title="Previous"
             >
-              ◀◀
+              <svg className="w-7 h-7 fill-current" viewBox="0 0 24 24">
+                <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
+              </svg>
             </button>
 
+            {/* Big Play/Pause Button */}
             <button
               onClick={() => dispatch(togglePlay())}
-              className="w-16 h-16 rounded-full bg-white text-black flex items-center justify-center text-xl font-bold shadow-xl shadow-white/20 transition-transform hover:scale-105 active:scale-95"
+              className="w-16 h-16 rounded-full bg-white text-black flex items-center justify-center shadow-2xl shadow-white/20 transition-transform active:scale-95 hover:scale-105 cursor-pointer"
             >
-              {isPlaying ? '❚❚' : '▶'}
+              {isPlaying ? (
+                <svg className="w-7 h-7 fill-current" viewBox="0 0 24 24">
+                  <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                </svg>
+              ) : (
+                <svg className="w-7 h-7 fill-current ml-1" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              )}
             </button>
 
+            {/* Next */}
             <button
               onClick={() => dispatch(nextTrack(queue))}
-              className="text-zinc-400 hover:text-white text-xl transition-transform active:scale-90"
+              className="p-2 text-white hover:text-zinc-300 transition-transform active:scale-90"
+              title="Next"
             >
-              ▶▶
+              <svg className="w-7 h-7 fill-current" viewBox="0 0 24 24">
+                <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
+              </svg>
             </button>
 
+            {/* Repeat */}
             <button
               onClick={() => dispatch(cycleRepeat())}
-              className={`text-sm transition-colors ${
-                repeatMode !== 'off' ? 'text-violet-400 font-bold' : 'text-zinc-500 hover:text-zinc-300'
+              className={`p-2 transition-colors relative ${
+                repeatMode !== 'off' ? 'text-violet-400 font-bold' : 'text-zinc-400 hover:text-white'
               }`}
+              title="Repeat"
             >
-              {repeatMode === 'one' ? '↺1' : '↺'}
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              {repeatMode !== 'off' && <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-violet-400" />}
             </button>
           </div>
 
-          {/* Volume Slider */}
-          <div className="w-full max-w-xs flex items-center gap-3 mt-6">
-            <span className="text-zinc-500 text-xs">🔈</span>
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.01}
-              value={volume}
-              onChange={(e) => dispatch(setVolume(Number(e.target.value)))}
-              className="w-full accent-violet-500 h-1 cursor-pointer"
-            />
-            <span className="text-zinc-500 text-xs">🔊</span>
-          </div>
+          {/* 6. BOTTOM QUICK TOOLBAR (Equalizer, Sleep Timer, Queue, Offline) */}
+          <div className="flex items-center justify-between pt-2 border-t border-white/10 text-zinc-400">
+            {/* Equalizer */}
+            <button
+              onClick={() => dispatch(setEqualizerOpen(true))}
+              className="flex items-center gap-1 text-xs hover:text-white transition-colors"
+              title="10-Band EQ"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+              </svg>
+              <span>Equalizer</span>
+            </button>
 
-          {/* Scroll Down Hint */}
-          <div className="mt-10 flex flex-col items-center text-zinc-500 animate-bounce">
-            <span className="text-[11px] font-semibold tracking-wider uppercase">
-              Scroll down for lyrics & credits
-            </span>
-            <span className="text-base mt-1">↓</span>
+            {/* Sleep Timer */}
+            <button
+              onClick={() => dispatch(setSleepTimerOpen(true))}
+              className={`flex items-center gap-1 text-xs transition-colors ${
+                sleepTimer.active ? 'text-violet-400 font-bold' : 'hover:text-white'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+              </svg>
+              <span>{sleepTimer.active ? 'Timer On' : 'Timer'}</span>
+            </button>
+
+            {/* Offline Download */}
+            <button
+              onClick={handleToggleDownload}
+              disabled={isDownloading}
+              className={`flex items-center gap-1 text-xs transition-colors ${
+                isOffline ? 'text-emerald-400 font-bold' : 'hover:text-white'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              <span>{isOffline ? 'Downloaded' : 'Download'}</span>
+            </button>
+
+            {/* Queue */}
+            <button
+              onClick={() => dispatch(setQueueOpen(true))}
+              className="flex items-center gap-1 text-xs hover:text-white transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h7" />
+              </svg>
+              <span>Queue</span>
+            </button>
+
+            {/* Hide Track */}
+            <button
+              onClick={() => {
+                dispatch(hideTrack(currentTrack.id));
+              }}
+              className="flex items-center gap-1 text-xs text-zinc-500 hover:text-rose-400 transition-colors"
+              title="Hide this song"
+            >
+              <span className="text-sm">⊘</span>
+              <span>Hide</span>
+            </button>
           </div>
         </div>
 
-        {/* 3. SYNCHRONIZED LYRICS SECTION (SPOTIFY STYLE) */}
-        <div className="mt-16 pt-12 border-t border-white/10 max-w-2xl mx-auto w-full">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <span className="text-xl">🎙</span>
-              <h2 className="text-2xl font-bold text-white tracking-tight">Lyrics</h2>
-            </div>
-            <span className="text-xs text-zinc-400 font-mono">
-              {lyrics.length > 0 ? 'Synchronized Mode' : 'Loading Lyrics...'}
-            </span>
-          </div>
+        {/* 7. BELOW THE FOLD: SYNCHRONIZED LYRICS CARD & CREDITS */}
+        <div className="mt-8 pb-16">
+          <div className="bg-[#14141e]/90 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-2xl">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-400 mb-4 flex items-center justify-between">
+              <span>Lyrics</span>
+              <span className="text-[10px] text-violet-400 lowercase font-medium">real-time sync</span>
+            </h3>
 
-          <div className="p-8 rounded-3xl bg-white/[0.04] border border-white/10 backdrop-blur-xl space-y-6">
-            {lyrics.length === 0 ? (
-              <p className="text-sm text-zinc-500 text-center py-10">
-                Fetching lyrics for this track...
-              </p>
+            {lyrics.length > 0 ? (
+              <div className="space-y-4 max-h-72 overflow-y-auto pr-2">
+                {lyrics.map((line, idx) => {
+                  const isActive = idx === activeLyricIndex;
+                  const isPast = idx < activeLyricIndex;
+
+                  return (
+                    <p
+                      key={idx}
+                      ref={isActive ? activeLyricRef : null}
+                      onClick={() => handleSeekToLyric(line.time)}
+                      className={`text-base sm:text-lg font-bold transition-all duration-300 cursor-pointer ${
+                        isActive
+                          ? 'text-white scale-105 translate-x-1 drop-shadow-[0_0_12px_rgba(255,255,255,0.4)]'
+                          : isPast
+                          ? 'text-zinc-500 hover:text-zinc-300'
+                          : 'text-zinc-400 hover:text-zinc-200'
+                      }`}
+                    >
+                      {line.text}
+                    </p>
+                  );
+                })}
+              </div>
             ) : (
-              lyrics.map((line, idx) => {
-                const isActive = activeLyricIndex === idx;
-                const isPast = activeLyricIndex > idx;
-
-                return (
-                  <div
-                    key={idx}
-                    ref={isActive ? activeLyricRef : null}
-                    onClick={() => handleSeekToLyric(line.time)}
-                    className={`cursor-pointer transition-all duration-300 py-1 ${
-                      isActive
-                        ? 'text-2xl sm:text-3xl font-extrabold text-white scale-[1.02] drop-shadow-[0_0_20px_rgba(255,255,255,0.4)]'
-                        : isPast
-                        ? 'text-lg sm:text-xl font-medium text-zinc-500 hover:text-zinc-300'
-                        : 'text-lg sm:text-xl font-medium text-zinc-600 hover:text-zinc-400'
-                    }`}
-                  >
-                    {line.text}
-                  </div>
-                );
-              })
+              <p className="text-sm text-zinc-400 italic py-4">
+                No synchronized lyrics available for this track.
+              </p>
             )}
           </div>
+
+          {/* Credits Card */}
+          {credits && (
+            <div className="mt-4 bg-[#14141e]/90 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-2xl">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-400 mb-3">
+                Credits
+              </h3>
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-zinc-400">Performed By</span>
+                  <span className="text-white font-semibold">{credits.performedBy.join(', ')}</span>
+                </div>
+                {credits.writtenBy && credits.writtenBy.length > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-zinc-400">Written By</span>
+                    <span className="text-white font-semibold">{credits.writtenBy.join(', ')}</span>
+                  </div>
+                )}
+                {credits.producedBy && credits.producedBy.length > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-zinc-400">Produced By</span>
+                    <span className="text-white font-semibold">{credits.producedBy.join(', ')}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-zinc-400">Audio Quality</span>
+                  <span className="text-emerald-400 font-semibold">{credits.audioSpecs.format} • {credits.audioSpecs.bitrate}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
 
-        {/* 4. CREDITS & SONG DETAILS (SPOTIFY STYLE) */}
-        {credits && (
-          <div className="mt-16 pt-12 pb-24 border-t border-white/10 max-w-2xl mx-auto w-full">
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-3">
-                <span className="text-xl">ℹ</span>
-                <h2 className="text-2xl font-bold text-white tracking-tight">Credits & Details</h2>
-              </div>
-              <span className="text-xs text-zinc-400">{credits.source}</span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Performed By */}
-              <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 mb-2">
-                  Performed By
-                </p>
-                <div className="space-y-1">
-                  {credits.performedBy.map((p, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-violet-400" />
-                      <p className="text-sm font-semibold text-white">{p}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Written By */}
-              <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 mb-2">
-                  Written By
-                </p>
-                <div className="space-y-1">
-                  {credits.writtenBy.map((w, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
-                      <p className="text-sm font-medium text-zinc-300">{w}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Produced & Composed By */}
-              <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 mb-2">
-                  Produced & Composed By
-                </p>
-                <div className="space-y-1">
-                  {credits.producedBy.map((prod, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-400" />
-                      <p className="text-sm font-medium text-zinc-300">{prod}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Audio Specifications */}
-              <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 mb-2">
-                  Audio Quality & Master
-                </p>
-                <div className="space-y-1.5 text-xs text-zinc-300 font-mono">
-                  <div className="flex justify-between">
-                    <span className="text-zinc-500">Codec:</span>
-                    <span className="text-violet-400 font-bold">{credits.audioSpecs.format}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-zinc-500">Sample Rate:</span>
-                    <span>{credits.audioSpecs.sampleRate}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-zinc-500">Bit Depth:</span>
-                    <span>{credits.audioSpecs.bitDepth}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-zinc-500">Bitrate:</span>
-                    <span>{credits.audioSpecs.bitrate}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Add To Playlist Modal */}
       <AddToPlaylistModal
         song={currentTrack}
         isOpen={isPlaylistModalOpen}

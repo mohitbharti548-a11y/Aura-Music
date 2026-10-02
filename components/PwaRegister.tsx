@@ -46,6 +46,7 @@ export default function PwaRegister() {
           // 3. Periodic update polling every 5 minutes
           const intervalId = setInterval(() => {
             reg.update().catch(() => {});
+            checkLiveVersion();
           }, 5 * 60 * 1000);
 
           return () => clearInterval(intervalId);
@@ -54,10 +55,30 @@ export default function PwaRegister() {
           console.warn('[Aura PWA] Service Worker registration failed:', err);
         });
 
+      // Periodic check against live server version API
+      async function checkLiveVersion() {
+        try {
+          const res = await fetch('/api/version', { cache: 'no-store' });
+          if (!res.ok) return;
+          const data = await res.json();
+          const storedVersion = localStorage.getItem('aura_app_version');
+          if (!storedVersion) {
+            localStorage.setItem('aura_app_version', data.version);
+          } else if (storedVersion !== data.version) {
+            setUpdateAvailable(true);
+          }
+        } catch {
+          // Offline or network error - ignore
+        }
+      }
+
+      checkLiveVersion();
+
       // 4. Check for updates on app focus / phone unlock
       function handleVisibilityChange() {
-        if (document.visibilityState === 'visible' && registration) {
-          registration.update().catch(() => {});
+        if (document.visibilityState === 'visible') {
+          if (registration) registration.update().catch(() => {});
+          checkLiveVersion();
         }
       }
 
@@ -97,8 +118,20 @@ export default function PwaRegister() {
   }, []);
 
   // Trigger Immediate In-App Update
-  function handleApplyUpdate() {
+  async function handleApplyUpdate() {
     setIsUpdating(true);
+    try {
+      const res = await fetch('/api/version', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.version) {
+          localStorage.setItem('aura_app_version', data.version);
+        }
+      }
+    } catch {
+      // Ignore
+    }
+
     if (waitingWorkerRef.current) {
       waitingWorkerRef.current.postMessage({ type: 'SKIP_WAITING' });
     } else {

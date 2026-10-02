@@ -53,9 +53,13 @@ function extractArtistList(artistString: string): string[] {
  * Interleaves multiple track arrays so the same artist isn't played repeatedly.
  * Mimics Spotify's weighted fair shuffle algorithm.
  */
-function interleaveRecommendations(arrays: Song[][], maxLimit = 30): Song[] {
+function interleaveRecommendations(
+  arrays: Song[][],
+  maxLimit = 10,
+  hiddenTrackIds: string[] = []
+): Song[] {
   const result: Song[] = [];
-  const seenIds = new Set<string>();
+  const seenIds = new Set<string>(hiddenTrackIds);
   const seenTitles = new Set<string>();
 
   const maxLen = Math.max(...arrays.map((a) => a.length), 0);
@@ -80,11 +84,12 @@ function interleaveRecommendations(arrays: Song[][], maxLimit = 30): Song[] {
 }
 
 /**
- * Generates an up-to-30 track intelligent dynamic radio station based on a seed song.
+ * Generates an up-to-10 track intelligent dynamic radio station based on a seed song.
  */
 export async function generateSongRecommendations(
   seedSong: Song,
-  limit = 30
+  limit = 10,
+  hiddenTrackIds: string[] = []
 ): Promise<Song[]> {
   try {
     const seedArtists = extractArtistList(seedSong.artist);
@@ -103,16 +108,16 @@ export async function generateSongRecommendations(
     const relatedArtistQuery = relatedArtists[1] || relatedArtists[0] || null;
 
     // 2. Fetch candidates across 4 parallel intelligent query channels
-    const query1 = searchJioSaavn(primaryArtist, 12);
+    const query1 = searchJioSaavn(primaryArtist, 8);
     const query2 = secondaryArtist
-      ? searchJioSaavn(secondaryArtist, 10)
+      ? searchJioSaavn(secondaryArtist, 6)
       : Promise.resolve([] as Song[]);
     const query3 = searchJioSaavn(
       seedSong.genre ? `${seedSong.genre} top hits` : `${primaryArtist} hits`,
-      10
+      6
     );
     const query4 = relatedArtistQuery
-      ? searchJioSaavn(relatedArtistQuery, 8)
+      ? searchJioSaavn(relatedArtistQuery, 6)
       : Promise.resolve([] as Song[]);
 
     // 5. Query local Neon DB for matching genre/artist tracks (if DB connected)
@@ -146,11 +151,13 @@ export async function generateSongRecommendations(
       localDbPromise,
     ]);
 
-    // Remove seed song itself
+    // Remove seed song itself and hidden track IDs
+    const hiddenSet = new Set(hiddenTrackIds);
     const filterSeed = (list: Song[]) =>
       list.filter(
         (s) =>
           s.id !== seedSong.id &&
+          !hiddenSet.has(s.id) &&
           s.title.toLowerCase().trim() !== seedSong.title.toLowerCase().trim()
       );
 
@@ -163,7 +170,8 @@ export async function generateSongRecommendations(
         filterSeed(q3Res),
         filterSeed(q4Res),
       ],
-      limit
+      limit,
+      hiddenTrackIds
     );
 
     return combined.slice(0, limit);

@@ -1,26 +1,51 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
   <defs>
-    <linearGradient id="aura-bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#09090f" />
-      <stop offset="100%" stop-color="#161622" />
+    <linearGradient id="aura-bg-192" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1035" />
+      <stop offset="50%" stop-color="#0f0c24" />
+      <stop offset="100%" stop-color="#0b1736" />
     </linearGradient>
-    <linearGradient id="aura-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#8b5cf6" />
-      <stop offset="50%" stop-color="#d946ef" />
-      <stop offset="100%" stop-color="#6366f1" />
+    <linearGradient id="aura-grad-192" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="35%" stop-color="#818cf8" />
+      <stop offset="70%" stop-color="#c084fc" />
+      <stop offset="100%" stop-color="#f472b6" />
     </linearGradient>
-    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="6" result="blur" />
+    <linearGradient id="crossbar-192" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="50%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#f472b6" />
+    </linearGradient>
+    <filter id="glow-192" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="5" result="blur" />
       <feComposite in="SourceGraphic" in2="blur" operator="over" />
     </filter>
   </defs>
-  <!-- App Icon Background -->
-  <rect width="192" height="192" rx="42" fill="url(#aura-bg)" stroke="rgba(255,255,255,0.12)" stroke-width="2" />
-  
-  <!-- Glowing Aura Sound Waves -->
-  <g filter="url(#glow)">
-    <circle cx="96" cy="96" r="48" fill="none" stroke="url(#aura-grad)" stroke-width="6" opacity="0.4" />
-    <path d="M56 96 C66 60, 76 132, 86 96 C96 60, 106 132, 116 96 C126 68, 136 124, 146 96" fill="none" stroke="url(#aura-grad)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" />
-    <circle cx="96" cy="96" r="8" fill="#ffffff" />
+
+  <rect width="192" height="192" rx="44" fill="url(#aura-bg-192)" stroke="rgba(255,255,255,0.2)" stroke-width="1.8" />
+
+  <!-- Surrounding Harmonic Soundwaves -->
+  <g opacity="0.8" filter="url(#glow-192)">
+    <circle cx="96" cy="96" r="68" fill="none" stroke="url(#aura-grad-192)" stroke-width="1.5" stroke-dasharray="4 8 16 8" opacity="0.5" />
+    <path d="M 40 108 C 34 90, 36 68, 50 54 C 62 40, 78 34, 96 34" fill="none" stroke="url(#aura-grad-192)" stroke-width="2.5" stroke-linecap="round" opacity="0.8" />
+    <path d="M 152 108 C 158 90, 156 68, 142 54 C 130 40, 114 34, 96 34" fill="none" stroke="url(#aura-grad-192)" stroke-width="2.5" stroke-linecap="round" opacity="0.8" />
+  </g>
+
+  <!-- Big 'A' with Disconnected / Floating Crossbar -->
+  <g filter="url(#glow-192)">
+    <path d="M 54 142 L 89 54 C 91 48, 93 46, 96 46 C 99 46, 101 48, 103 54 L 138 142" 
+          fill="none" 
+          stroke="url(#aura-grad-192)" 
+          stroke-width="13" 
+          stroke-linecap="round" 
+          stroke-linejoin="round" />
+
+    <!-- Disconnected Crossbar -->
+    <path d="M 81 106 Q 89 101, 96 106 T 111 106" 
+          fill="none" 
+          stroke="url(#crossbar-192)" 
+          stroke-width="7" 
+          stroke-linecap="round" />
+    <circle cx="96" cy="106" r="2.2" fill="#ffffff" />
   </g>
 </svg>

@@ -1,7 +1,7 @@
 'use client';
 // components/DiscoverBrowse.tsx
 import { useState, useEffect } from 'react';
-import { useAppDispatch } from '../store/hooks';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { setTrack } from '../features/player/playerSlice';
 import type { Song } from '../types/music';
 
@@ -46,6 +46,7 @@ export default function DiscoverBrowse({
   onSelectSong?: (song: Song) => void;
 }) {
   const dispatch = useAppDispatch();
+  const hiddenTrackIds = useAppSelector((s) => s.player.hiddenTrackIds);
   const [activeCategory, setActiveCategory] = useState<GenreCategory | null>(null);
   const [categoryTracks, setCategoryTracks] = useState<Song[]>([]);
   const [loading, setLoading] = useState(false);
@@ -60,14 +61,16 @@ export default function DiscoverBrowse({
     fetch(`/api/search?q=${encodeURIComponent(activeCategory.query)}`)
       .then((res) => res.json())
       .then((data) => {
-        const combined = [...(data.local || []), ...(data.global || [])];
+        const combined = [...(data.local || []), ...(data.global || [])].filter(
+          (s) => !hiddenTrackIds.includes(s.id)
+        );
         setCategoryTracks(combined);
       })
       .catch((err) => {
         console.error('Failed to load category tracks:', err);
       })
       .finally(() => setLoading(false));
-  }, [activeCategory]);
+  }, [activeCategory, hiddenTrackIds]);
 
   function handlePlay(song: Song) {
     dispatch(setTrack(song));

@@ -38,25 +38,37 @@ body {
   background: rgba(255, 255, 255, 0.25);
 }
 
-/* Tactile Depth & Ambient Glow Classes */
-.depth-card {
-  position: relative;
-  background: linear-gradient(145deg, rgba(28, 28, 35, 0.6) 0%, rgba(15, 15, 20, 0.8) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+/* Hide any Netlify injected badges, drawers, or feedback widgets */
+iframe[data-netlify-identity],
+#netlify-drawer,
+div[id*="netlify"],
+div[class*="netlify-badge"],
+.netlify-badge,
+[data-netlify-drawer],
+div:has(> iframe[title*="Netlify"]) {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  height: 0 !important;
+  width: 0 !important;
+  position: absolute !important;
+  z-index: -9999 !important;
 }
 
-.depth-card:hover {
-  transform: translateY(-3px) scale(1.01);
-  border-color: rgba(255, 255, 255, 0.16);
-  box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.9), 0 0 25px rgba(139, 92, 246, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+/* Safe area padding for modern mobile notches and bottom gesture bars */
+.pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom, 14px), 12px);
+}
+.pt-safe {
+  padding-top: max(env(safe-area-inset-top, 14px), 12px);
 }
 
-.depth-card:active {
-  transform: translateY(0px) scale(0.99);
-  box-shadow: 0 5px 15px -5px rgba(0, 0, 0, 0.8), inset 0 2px 4px rgba(0, 0, 0, 0.4);
+/* Spotify-Grade Fluid Transition Timings */
+.spotify-spring {
+  transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
 }
+
 
 .depth-glass {
   background: rgba(14, 14, 18, 0.75);
