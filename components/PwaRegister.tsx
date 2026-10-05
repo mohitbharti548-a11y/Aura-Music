@@ -200,7 +200,7 @@ export default function PwaRegister() {
 
             {/* Version Title */}
             <h2 className="text-2xl font-bold text-white tracking-tight mb-4">
-              Version v1.4.0 is available
+              Version v1.4.1 is available
             </h2>
 
             {/* Changelog Card Box */}

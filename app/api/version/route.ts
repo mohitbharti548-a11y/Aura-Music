@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   const versionData = {
-    version: '1.4.0',
+    version: '1.4.1',
     appId: 'com.auramusic.app',
     appName: 'Aura Music',
     buildTime: new Date().toISOString(),
