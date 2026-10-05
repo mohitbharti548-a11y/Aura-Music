@@ -63,6 +63,7 @@ export default function PlayerBar({ queue }: { queue: Song[] }) {
     offlineTrackIds,
     recommendations,
     hiddenTrackIds,
+    sessionPlayedIds,
   } = useAppSelector((s) => s.player);
 
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -173,8 +174,8 @@ export default function PlayerBar({ queue }: { queue: Song[] }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             seedSong: currentTrack,
-            hiddenTrackIds,
-            limit: 10,
+            hiddenTrackIds: [...new Set([...hiddenTrackIds, ...sessionPlayedIds])],
+            limit: 40,
           }),
         })
           .then((r) => r.json())
@@ -194,17 +195,17 @@ export default function PlayerBar({ queue }: { queue: Song[] }) {
     setupTrackAudio();
   }, [currentTrack?.id]);
 
-  // Periodic Infinite Queue Replenishment Check: Keep queue constantly stocked with 10 upcoming tracks
+  // Periodic Infinite Queue Replenishment Check: Keep queue constantly stocked with 40 upcoming tracks
   useEffect(() => {
-    if (!currentTrack || recommendations.length >= 6 || !isPlaying) return;
+    if (!currentTrack || recommendations.length >= 30 || !isPlaying) return;
 
-    const needed = 10 - recommendations.length;
+    const needed = 40 - recommendations.length;
     fetch('/api/recommendations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         seedSong: currentTrack,
-        hiddenTrackIds,
+        hiddenTrackIds: [...new Set([...hiddenTrackIds, ...sessionPlayedIds])],
         limit: needed,
       }),
     })

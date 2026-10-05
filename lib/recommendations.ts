@@ -108,19 +108,22 @@ export async function generateSongRecommendations(
     const relatedArtistQuery = relatedArtists[1] || relatedArtists[0] || null;
 
     // 2. Fetch candidates across more versatile and dynamic intelligent query channels
-    const query1 = searchJioSaavn(primaryArtist, 6);
+    const queryLimit = Math.max(15, limit);
+    const langBoost = seedSong.genre ? `${seedSong.genre} ` : '';
+
+    const query1 = searchJioSaavn(`${langBoost}${primaryArtist}`, queryLimit);
     
     // Use Genre and Type (e.g. Acoustic, EDM, Lo-Fi) if available
     const genreQuery = seedSong.genre ? `${seedSong.genre} hits` : `${primaryArtist} best songs`;
-    const query2 = searchJioSaavn(genreQuery, 6);
+    const query2 = searchJioSaavn(genreQuery, queryLimit);
     
     // Use secondary artist or related artists for variety
     const varietyArtist = secondaryArtist || relatedArtists[Math.floor(Math.random() * Math.max(1, relatedArtists.length))] || primaryArtist;
-    const query3 = searchJioSaavn(`${varietyArtist} new`, 6);
+    const query3 = searchJioSaavn(`${langBoost}${varietyArtist} new`, queryLimit);
     
     // Mix it up with similar album vibes or broad type
-    const typeQuery = seedSong.album ? `${seedSong.album} songs` : `${primaryArtist} top tracks`;
-    const query4 = searchJioSaavn(typeQuery, 6);
+    const typeQuery = seedSong.album ? `${langBoost}${seedSong.album} songs` : `${langBoost}${primaryArtist} top tracks`;
+    const query4 = searchJioSaavn(typeQuery, queryLimit);
 
     // 5. Query local Neon DB for matching genre/artist tracks (if DB connected)
     const localDbPromise = (async () => {
@@ -160,7 +163,8 @@ export async function generateSongRecommendations(
         (s) =>
           s.id !== seedSong.id &&
           !hiddenSet.has(s.id) &&
-          s.title.toLowerCase().trim() !== seedSong.title.toLowerCase().trim()
+          s.title.toLowerCase().trim() !== seedSong.title.toLowerCase().trim() &&
+          (!seedSong.genre || (s.genre && s.genre.toLowerCase() === seedSong.genre.toLowerCase()))
       );
 
     // 3. Interleave streams for high musical coherence & artist variety

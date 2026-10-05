@@ -94,29 +94,7 @@ export default function Sidebar() {
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-400 via-violet-500 to-fuchsia-500 p-[1.5px] shadow-lg shadow-violet-500/20 flex items-center justify-center">
                 <div className="w-full h-full bg-[#0c0a1a] rounded-[10px] flex items-center justify-center">
-                  <svg className="w-5 h-5" viewBox="0 0 100 100" fill="none">
-                    <defs>
-                      <linearGradient id="logo-sidebar-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#38bdf8" />
-                        <stop offset="40%" stopColor="#818cf8" />
-                        <stop offset="70%" stopColor="#c084fc" />
-                        <stop offset="100%" stopColor="#f472b6" />
-                      </linearGradient>
-                      <linearGradient id="logo-sidebar-bar" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stopColor="#38bdf8" />
-                        <stop offset="50%" stopColor="#ffffff" />
-                        <stop offset="100%" stopColor="#f472b6" />
-                      </linearGradient>
-                    </defs>
-                    {/* Surrounding Harmonic Sound Arcs */}
-                    <path d="M 22 55 C 18 45, 20 32, 30 25 C 38 18, 45 16, 50 16" stroke="url(#logo-sidebar-grad)" strokeWidth="3" strokeLinecap="round" opacity="0.85" />
-                    <path d="M 78 55 C 82 45, 80 32, 70 25 C 62 18, 55 16, 50 16" stroke="url(#logo-sidebar-grad)" strokeWidth="3" strokeLinecap="round" opacity="0.85" />
-                    {/* Master 'A' with disconnected floating crossbar */}
-                    <path d="M 27 75 L 46 25 C 47 22, 49 21, 50 21 C 51 21, 53 22, 54 25 L 73 75" stroke="url(#logo-sidebar-grad)" strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" />
-                    {/* Floating Disconnected Crossbar */}
-                    <path d="M 42 56 Q 46 53, 50 56 T 58 56" stroke="url(#logo-sidebar-bar)" strokeWidth="5" strokeLinecap="round" />
-                    <circle cx="50" cy="56" r="1.5" fill="#ffffff" />
-                  </svg>
+                  <img src={`/logo.svg?v=${Date.now()}`} alt="Aura Logo" className="w-5 h-5 object-contain" />
                 </div>
               </div>
               <div className="flex flex-col">

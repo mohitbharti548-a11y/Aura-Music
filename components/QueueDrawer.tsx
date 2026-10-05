@@ -33,6 +33,7 @@ export default function QueueDrawer({ queue }: { queue: Song[] }) {
     recommendationsLoading,
     isAutoplayEnabled,
     hiddenTrackIds,
+    sessionPlayedIds,
   } = useAppSelector((s) => s.player);
 
   if (!isOpen) return null;
@@ -40,7 +41,7 @@ export default function QueueDrawer({ queue }: { queue: Song[] }) {
   async function handlePlayRecommendationAtIndex(index: number, song: Song) {
     dispatch(playTrackFromRecommendations(index));
 
-    // Replenish sliding queue to keep 10 songs
+    // Replenish sliding queue to keep 40 songs
     const replenishCount = index + 1;
     try {
       const res = await fetch('/api/recommendations', {
@@ -48,8 +49,8 @@ export default function QueueDrawer({ queue }: { queue: Song[] }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           seedSong: song,
-          hiddenTrackIds,
-          limit: replenishCount,
+          hiddenTrackIds: [...new Set([...hiddenTrackIds, ...sessionPlayedIds])],
+          limit: Math.max(replenishCount, 15),
         }),
       });
       if (res.ok) {
