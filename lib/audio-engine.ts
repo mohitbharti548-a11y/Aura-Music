@@ -53,17 +53,17 @@ class AudioEngine {
       this.connectedElement = audioElement;
 
       // Note: createMediaElementSource can only be called once per audio element
-      this.sourceNode = this.ctx.createMediaElementSource(audioElement);
+      this.sourceNode = this.ctx!.createMediaElementSource(audioElement);
 
       // 1. Create Preamp Gain Node
-      this.gainNode = this.ctx.createGain();
-      this.gainNode.gain.value = 1.0;
+      this.gainNode = this.ctx!.createGain();
+      this.gainNode!.gain.value = 1.0;
 
       // 2. Create Dedicated Sub-Bass Booster Filter
-      this.bassFilter = this.ctx.createBiquadFilter();
-      this.bassFilter.type = 'lowshelf';
-      this.bassFilter.frequency.value = 80;
-      this.bassFilter.gain.value = 0;
+      this.bassFilter = this.ctx!.createBiquadFilter();
+      this.bassFilter!.type = 'lowshelf';
+      this.bassFilter!.frequency.value = 80;
+      this.bassFilter!.gain.value = 0;
 
       // 3. Create 5-Band Parametric/Graphic EQ Filters
       this.filters = EQ_BANDS.map((band) => {
@@ -76,19 +76,20 @@ class AudioEngine {
       });
 
       // 4. Chain: Source -> Preamp -> Bass Filter -> EQ Band 0..4 -> Destination
-      let currentNode: AudioNode = this.sourceNode;
-      currentNode.connect(this.gainNode);
-      currentNode = this.gainNode;
+      let currentNode: AudioNode = this.sourceNode!;
+      currentNode.connect(this.gainNode!);
+      currentNode = this.gainNode!;
 
-      currentNode.connect(this.bassFilter);
-      currentNode = this.bassFilter;
+      currentNode.connect(this.bassFilter!);
+      currentNode = this.bassFilter!;
 
       for (const filter of this.filters) {
+        if (!filter) continue;
         currentNode.connect(filter);
         currentNode = filter;
       }
 
-      currentNode.connect(this.ctx.destination);
+      currentNode.connect(this.ctx!.destination);
       this.isInitialized = true;
     } catch (err) {
       console.warn('Web Audio API EQ initialization note:', err);
