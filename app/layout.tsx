@@ -90,7 +90,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col overflow-hidden bg-black antialiased">
+      <body className="min-h-full flex flex-col overflow-hidden bg-black antialiased pt-safe pb-safe">
         <StoreProvider>
           <PwaRegister />
           {children}

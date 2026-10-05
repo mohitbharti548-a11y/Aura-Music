@@ -107,18 +107,20 @@ export async function generateSongRecommendations(
     const secondaryArtist = seedArtists[1] || relatedArtists[0];
     const relatedArtistQuery = relatedArtists[1] || relatedArtists[0] || null;
 
-    // 2. Fetch candidates across 4 parallel intelligent query channels
-    const query1 = searchJioSaavn(primaryArtist, 8);
-    const query2 = secondaryArtist
-      ? searchJioSaavn(secondaryArtist, 6)
-      : Promise.resolve([] as Song[]);
-    const query3 = searchJioSaavn(
-      seedSong.genre ? `${seedSong.genre} top hits` : `${primaryArtist} hits`,
-      6
-    );
-    const query4 = relatedArtistQuery
-      ? searchJioSaavn(relatedArtistQuery, 6)
-      : Promise.resolve([] as Song[]);
+    // 2. Fetch candidates across more versatile and dynamic intelligent query channels
+    const query1 = searchJioSaavn(primaryArtist, 6);
+    
+    // Use Genre and Type (e.g. Acoustic, EDM, Lo-Fi) if available
+    const genreQuery = seedSong.genre ? `${seedSong.genre} hits` : `${primaryArtist} best songs`;
+    const query2 = searchJioSaavn(genreQuery, 6);
+    
+    // Use secondary artist or related artists for variety
+    const varietyArtist = secondaryArtist || relatedArtists[Math.floor(Math.random() * Math.max(1, relatedArtists.length))] || primaryArtist;
+    const query3 = searchJioSaavn(`${varietyArtist} new`, 6);
+    
+    // Mix it up with similar album vibes or broad type
+    const typeQuery = seedSong.album ? `${seedSong.album} songs` : `${primaryArtist} top tracks`;
+    const query4 = searchJioSaavn(typeQuery, 6);
 
     // 5. Query local Neon DB for matching genre/artist tracks (if DB connected)
     const localDbPromise = (async () => {

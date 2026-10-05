@@ -370,7 +370,7 @@ export default function PlayerBar({ queue }: { queue: Song[] }) {
       />
 
       {/* ==================================================================== */}
-      {/* 1. FLOATING PILL MINI-PLAYCARD WITH DIRECT LIKE & HIDE BUTTONS        */}
+      {/* 1. FLOATING PILL MINI-PLAYCARD (DYNAMIC ISLAND STYLE)                */}
       {/* ==================================================================== */}
       {currentTrack && (
         <div
@@ -378,179 +378,105 @@ export default function PlayerBar({ queue }: { queue: Song[] }) {
             transform: `translateX(${swipeX}px)`,
             transition: isSwiping.current ? 'none' : 'transform 0.25s cubic-bezier(0.32, 0.72, 0, 1)',
           }}
-          className="fixed bottom-[60px] sm:bottom-4 left-3 right-3 sm:left-6 sm:right-6 max-w-xl mx-auto z-40 select-none"
+          className="fixed bottom-[90px] sm:bottom-6 left-0 right-0 z-40 flex justify-center select-none pointer-events-none px-4"
         >
           <div
             onTouchStart={handleMiniTouchStart}
             onTouchMove={handleMiniTouchMove}
             onTouchEnd={handleMiniTouchEnd}
             onClick={() => dispatch(setExpandedOpen(true))}
-            className="bg-[#12121e]/96 backdrop-blur-3xl border border-white/15 rounded-full px-3.5 py-2 shadow-[0_16px_40px_rgba(0,0,0,0.85)] flex items-center justify-between gap-2.5 cursor-pointer hover:border-white/25 transition-all group"
+            className="pointer-events-auto bg-[#1a1a24]/95 backdrop-blur-2xl border border-white/10 rounded-full px-2 py-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.6)] flex items-center gap-3 cursor-pointer hover:border-white/25 transition-all max-w-[360px] w-full"
           >
-            {/* Left: Circular Spinning Artwork + Track Info */}
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <div className="relative w-11 h-11 rounded-full overflow-hidden bg-zinc-900 shrink-0 border-2 border-white/20 shadow-md">
-                {currentTrack.cover_url ? (
-                  <img
-                    src={currentTrack.cover_url}
-                    alt={currentTrack.title}
-                    className={`w-full h-full object-cover transition-all ${
-                      isPlaying ? 'animate-[spin_12s_linear_infinite]' : ''
-                    }`}
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-tr from-violet-600 to-indigo-900 flex items-center justify-center text-xs">
-                    ✦
-                  </div>
-                )}
-                <div className="absolute inset-0 m-auto w-2.5 h-2.5 rounded-full bg-[#12121e] border border-white/30" />
-              </div>
-
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-white truncate tracking-tight">
-                  {currentTrack.title}
-                </p>
-                <p className="text-xs text-zinc-400 truncate mt-0.5">
-                  {currentTrack.artist}
-                </p>
-              </div>
+            {/* Left: Circular Spinning Artwork */}
+            <div className="relative w-10 h-10 rounded-full overflow-hidden shrink-0 border border-white/10 shadow-md">
+              {currentTrack.cover_url ? (
+                <img
+                  src={currentTrack.cover_url}
+                  alt={currentTrack.title}
+                  className={`w-full h-full object-cover transition-all ${
+                    isPlaying ? 'animate-[spin_12s_linear_infinite]' : ''
+                  }`}
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-tr from-violet-600 to-indigo-900 flex items-center justify-center text-xs">
+                  ✦
+                </div>
+              )}
             </div>
 
-            {/* Right: Direct Controls (Like, Prev, Play/Pause, Next, Hide) */}
+            {/* Middle: Track Info */}
+            <div className="min-w-0 flex-1 flex flex-col justify-center">
+              <p className="text-[13px] font-bold text-white truncate">
+                {currentTrack.title}
+              </p>
+              <p className="text-[11px] text-zinc-400 truncate">
+                {currentTrack.artist}
+              </p>
+            </div>
+
+            {/* Right: Controls */}
             <div
               onClick={(e) => e.stopPropagation()}
-              className="flex items-center gap-1.5 sm:gap-2.5 shrink-0"
+              className="flex items-center gap-1 shrink-0 pr-1"
             >
-              {/* Direct Like / Favorite Button */}
               <button
                 onClick={handleToggleLikeDirect}
                 className="p-1.5 text-zinc-400 hover:text-white transition-transform active:scale-125"
-                title={currentTrack.is_liked ? 'Remove from favorites' : 'Add to favorites'}
               >
-                <svg
-                  className={`w-5 h-5 transition-colors ${
-                    currentTrack.is_liked ? 'text-rose-500 fill-rose-500' : 'text-zinc-400'
-                  }`}
-                  fill={currentTrack.is_liked ? 'currentColor' : 'none'}
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
+                <svg className={`w-4 h-4 ${currentTrack.is_liked ? 'text-rose-500 fill-rose-500' : ''}`} fill={currentTrack.is_liked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
               </button>
-
-              {/* Previous Track */}
-              <button
-                onClick={() => dispatch(previousTrack(queue))}
-                className="p-1.5 text-zinc-300 hover:text-white transition-transform active:scale-90 hidden sm:block"
-                title="Previous Track"
-              >
-                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                  <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
-                </svg>
-              </button>
-
-              {/* Big Circular Play / Pause Button */}
+              <button onClick={() => dispatch(previousTrack(queue))} className="p-1.5 text-zinc-300 active:scale-90"><svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" /></svg></button>
               <button
                 onClick={() => dispatch(togglePlay())}
-                className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center shadow-lg transition-transform active:scale-90 hover:scale-105"
-                title={isPlaying ? 'Pause' : 'Play'}
+                className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center shadow-lg active:scale-90 mx-0.5"
               >
-                {isPlaying ? (
-                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                    <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-                  </svg>
-                ) : (
-                  <svg className="w-4 h-4 fill-current ml-0.5" viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
-                )}
+                {isPlaying ? <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg> : <svg className="w-3.5 h-3.5 fill-current ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>}
               </button>
-
-              {/* Next Track */}
-              <button
-                onClick={() => dispatch(nextTrack(queue))}
-                className="p-1.5 text-zinc-300 hover:text-white transition-transform active:scale-90"
-                title="Next Track"
-              >
-                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                  <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
-                </svg>
-              </button>
-
-              {/* Direct Hide / Remove Button */}
-              <button
-                onClick={handleHideTrackDirect}
-                className="p-1.5 rounded-full text-zinc-500 hover:text-rose-400 transition-colors"
-                title="Hide & skip this song"
-              >
-                <span className="text-sm font-bold">⊘</span>
-              </button>
+              <button onClick={() => dispatch(nextTrack(queue))} className="p-1.5 text-zinc-300 active:scale-90"><svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" /></svg></button>
+              <button onClick={handleHideTrackDirect} className="p-1 text-zinc-500 hover:text-rose-400"><span className="text-xs font-bold">⊘</span></button>
             </div>
           </div>
         </div>
       )}
 
       {/* ==================================================================== */}
-      {/* 2. DEDICATED MOBILE BOTTOM NAVIGATION BAR (<md)                      */}
+      {/* 2. DEDICATED MOBILE BOTTOM NAVIGATION BAR (<md) - SEPARATE CIRCLES  */}
       {/* ==================================================================== */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#07070b]/96 backdrop-blur-2xl border-t border-white/[0.08] h-14 pb-safe flex items-center justify-around select-none">
+      <nav className="md:hidden fixed bottom-4 left-0 right-0 z-40 flex items-center justify-center gap-5 pb-safe pointer-events-none select-none">
         <button
           onClick={() => dispatch(selectPlaylist(null))}
-          className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
-            isHome ? 'text-white' : 'text-zinc-400 hover:text-zinc-200'
+          className={`pointer-events-auto flex items-center justify-center w-12 h-12 rounded-full shadow-lg backdrop-blur-xl transition-all ${
+            isHome ? 'bg-indigo-500/90 text-white border-2 border-indigo-400/30' : 'bg-[#12121e]/80 text-zinc-400 border border-white/5 hover:bg-[#1a1a24]/90'
           }`}
         >
-          <svg className="w-5 h-5" fill={isHome ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={isHome ? '0' : '2'}>
-            <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
-          </svg>
-          <span className={`text-[10px] mt-0.5 ${isHome ? 'font-bold text-white' : 'font-medium text-zinc-400'}`}>
-            Home
-          </span>
+          <svg className="w-5 h-5" fill={isHome ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={isHome ? '0' : '2'}><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" /></svg>
         </button>
 
         <button
           onClick={() => dispatch(selectPlaylist('search'))}
-          className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
-            isSearch ? 'text-white' : 'text-zinc-400 hover:text-zinc-200'
+          className={`pointer-events-auto flex items-center justify-center w-12 h-12 rounded-full shadow-lg backdrop-blur-xl transition-all ${
+            isSearch ? 'bg-emerald-500/90 text-white border-2 border-emerald-400/30' : 'bg-[#12121e]/80 text-zinc-400 border border-white/5 hover:bg-[#1a1a24]/90'
           }`}
         >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={isSearch ? '2.8' : '2'}>
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          <span className={`text-[10px] mt-0.5 ${isSearch ? 'font-bold text-white' : 'font-medium text-zinc-400'}`}>
-            Search
-          </span>
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={isSearch ? '2.8' : '2'}><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
         </button>
 
         <button
           onClick={() => dispatch(selectPlaylist('discover'))}
-          className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
-            isDiscover ? 'text-white' : 'text-zinc-400 hover:text-zinc-200'
+          className={`pointer-events-auto flex items-center justify-center w-12 h-12 rounded-full shadow-lg backdrop-blur-xl transition-all ${
+            isDiscover ? 'bg-amber-500/90 text-white border-2 border-amber-400/30' : 'bg-[#12121e]/80 text-zinc-400 border border-white/5 hover:bg-[#1a1a24]/90'
           }`}
         >
-          <svg className="w-5 h-5" fill={isDiscover ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={isDiscover ? '0' : '2'}>
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-          </svg>
-          <span className={`text-[10px] mt-0.5 ${isDiscover ? 'font-bold text-white' : 'font-medium text-zinc-400'}`}>
-            Discover
-          </span>
+          <svg className="w-5 h-5" fill={isDiscover ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={isDiscover ? '0' : '2'}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
         </button>
 
         <button
           onClick={() => dispatch(selectPlaylist('liked'))}
-          className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
-            isLibrary ? 'text-white' : 'text-zinc-400 hover:text-zinc-200'
+          className={`pointer-events-auto flex items-center justify-center w-12 h-12 rounded-full shadow-lg backdrop-blur-xl transition-all ${
+            isLibrary ? 'bg-rose-500/90 text-white border-2 border-rose-400/30' : 'bg-[#12121e]/80 text-zinc-400 border border-white/5 hover:bg-[#1a1a24]/90'
           }`}
         >
-          <svg className="w-5 h-5" fill={isLibrary ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={isLibrary ? '0' : '2'}>
-            <path d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-          </svg>
-          <span className={`text-[10px] mt-0.5 ${isLibrary ? 'font-bold text-white' : 'font-medium text-zinc-400'}`}>
-            Library
-          </span>
+          <svg className="w-5 h-5" fill={isLibrary ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={isLibrary ? '0' : '2'}><path d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
         </button>
       </nav>
 

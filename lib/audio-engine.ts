@@ -38,6 +38,9 @@ class AudioEngine {
   private isInitialized = false;
 
   public init(audioElement: HTMLAudioElement) {
+    // Bypassing Web Audio API to fix Lockscreen Media Session & Volume Suppression (Issue #1, #4)
+    if (true) return;
+
     if (this.isInitialized && this.connectedElement === audioElement) {
       return;
     }
