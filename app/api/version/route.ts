@@ -6,23 +6,21 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   const versionData = {
-    version: '1.5.0',
+    version: '1.5.1',
     appId: 'com.sangit.app',
     appName: 'Sāṅgīt',
     buildTime: new Date().toISOString(),
     fixes: [
-      'Eliminated Spotify repetition trap with anti-fatigue frequency decay',
-      'Fixed abrupt acoustic transitions with Camelot wheel key matching',
-      'Multi-vector search tolerance for phonetic variations & transliterations',
-      'Permanently resolved Netlify watermark interference'
+      'Outside app icon updated across Android mipmaps (square & round), PWA, and browser tabs',
+      'Netlify drawer and feedback badge permanently blocked via DOM and CustomElement interception',
+      'Bottom navigation and mini-player elevated higher to prevent phone gesture bar interference',
+      'Mini-player hide button removed to eliminate accidental mis-taps while skipping'
     ],
     improvements: [
-      'Complete brand redesign: Sāṅgīt with stylized teal and gold clef emblem',
-      'Harmonic Camelot Wheel DJ-grade transitions between queued tracks',
-      'Sāṅgīt Neural & Phonetic Omni-Search with natural language intent extraction',
-      'Live Taste DNA profile with real-time acoustic multi-vector radar',
-      'Interactive Serendipity Steerer slider (Familiar Comfort ↔ Deep Discovery)',
-      'Four dynamic smart daily mixes categorized by acoustic mood & tempo'
+      'Reverse-engineered Spotify Premium layout: time-of-day greeting, 6-pack quick access grid, curated shelves',
+      'BaRT dynamic recommendation engine balancing familiar favorites and serendipitous discovery',
+      'Spotify-style micro-progress indicator on compact player',
+      'Silky spring animations with cubic-bezier easing across all shelves and hover states'
     ]
   };
 

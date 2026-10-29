@@ -355,7 +355,7 @@ export default function Sidebar() {
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/50" />
               <span className="font-normal text-zinc-400">Lossless Studio</span>
             </div>
-            <span className="text-[10px] text-zinc-600 font-mono">v1.5.0</span>
+            <span className="text-[10px] text-zinc-600 font-mono">v1.5.1</span>
           </div>
 
           <button

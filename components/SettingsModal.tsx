@@ -84,7 +84,7 @@ export default function SettingsModal({
                 <p className="text-[10px] text-zinc-400">Keep Sāṅgīt up-to-date with latest studio patches</p>
               </div>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30">
-                v1.5.0
+                v1.5.1
               </span>
             </div>
 

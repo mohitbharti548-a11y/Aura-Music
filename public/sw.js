@@ -1,5 +1,5 @@
 // public/sw.js - Sāṅgīt Progressive Web App Service Worker with In-App Auto-Update
-const CACHE_VERSION = 'sangit-v1.5.0';
+const CACHE_VERSION = 'sangit-v1.5.1';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',

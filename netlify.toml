@@ -5,6 +5,10 @@
 [build.environment]
   NETLIFY_DEPLOY_PREVIEWS = "false"
   DISABLE_NETLIFY_BADGE = "true"
+  NETLIFY_USE_DRAWER = "false"
+  DRAWER = "false"
+  NETLIFY_DRAWER = "false"
+  NETLIFY_ENABLE_FEEDBACK = "false"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"

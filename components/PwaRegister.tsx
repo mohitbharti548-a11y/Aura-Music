@@ -201,7 +201,7 @@ export default function PwaRegister() {
 
             {/* Version Title */}
             <h2 className="text-2xl font-bold text-white tracking-tight mb-4">
-              Version v1.5.0 is available
+              Version v1.5.1 is available
             </h2>
 
             {/* Changelog Card Box */}
@@ -212,19 +212,19 @@ export default function PwaRegister() {
               <div className="space-y-1.5">
                 <p className="text-xs font-bold text-white uppercase tracking-wider">• Upgrades</p>
                 <p className="pl-3 text-[11px] text-zinc-300 leading-relaxed">
-                  • Camelot Wheel harmonic transitions: DJ-grade key & tempo matching.
+                  • Reverse-engineered Spotify Premium layout: 6-pack grid, dynamic ambient greeting & curated shelves.
                 </p>
                 <p className="pl-3 text-[11px] text-zinc-300 leading-relaxed">
-                  • Neural & Phonetic Omni-Search: Typo and transliteration resilience.
+                  • Outside app icon updated across Android launcher mipmaps (square & round), PWA, and browser tabs.
                 </p>
                 <p className="pl-3 text-[11px] text-zinc-300 leading-relaxed">
-                  • Live Taste DNA & Acoustic Radar with customizable Serendipity Steerer.
+                  • Bottom navigation and player bar elevated higher for optimal thumb ergonomics.
                 </p>
                 <p className="pl-3 text-[11px] text-zinc-300 leading-relaxed">
-                  • Dynamic Daily Mixes 1-4 with zero-payola harmonic sequencing.
+                  • Netlify drawer, badge, and watermark permanently eradicated.
                 </p>
                 <p className="pl-3 text-[11px] text-zinc-300 leading-relaxed">
-                  • Sāṅgīt brand identity with custom teal & gold clef logo.
+                  • Silky spring cubic-bezier animations across all cards and hover states.
                 </p>
               </div>
             </div>
