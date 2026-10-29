@@ -1,8 +1,8 @@
 {
-  "packageId": "com.auramusic.app",
+  "packageId": "com.sangit.app",
   "host": "auramusicrep.netlify.app",
-  "name": "Aura Music",
-  "launcherName": "Aura",
+  "name": "Sāṅgīt",
+  "launcherName": "Sāṅgīt",
   "display": "standalone",
   "themeColor": "#070709",
   "themeColorDark": "#070709",

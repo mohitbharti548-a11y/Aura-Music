@@ -10,6 +10,7 @@ import {
   createPlaylist,
   deletePlaylist,
 } from '../store/playlistsSlice';
+import TasteDnaModal from './TasteDnaModal';
 
 export default function Sidebar() {
   const dispatch = useAppDispatch();
@@ -17,6 +18,7 @@ export default function Sidebar() {
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isTasteDnaOpen, setIsTasteDnaOpen] = useState(false);
 
   function handleSelectHome() {
     dispatch(selectPlaylist(null));
@@ -92,13 +94,13 @@ export default function Sidebar() {
           {/* Brand Header */}
           <div className="px-6 py-6 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-400 via-violet-500 to-fuchsia-500 p-[1.5px] shadow-lg shadow-violet-500/20 flex items-center justify-center">
-                <div className="w-full h-full bg-[#0c0a1a] rounded-[10px] flex items-center justify-center">
-                  <img src={`/logo.svg?v=${Date.now()}`} alt="Aura Logo" className="w-5 h-5 object-contain" />
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#36848d] via-[#48989f] to-[#d1b27d] p-[1.5px] shadow-lg shadow-teal-500/20 flex items-center justify-center">
+                <div className="w-full h-full bg-[#08080c] rounded-[10px] flex items-center justify-center p-0.5">
+                  <img src="/logo-mark.png" alt="Sāṅgīt Logo" className="w-5 h-5 object-contain" />
                 </div>
               </div>
               <div className="flex flex-col">
-                <span className="text-sm font-bold tracking-tight bg-gradient-to-r from-sky-200 via-violet-200 to-pink-200 bg-clip-text text-transparent">Aura</span>
+                <span className="text-base font-bold tracking-tight bg-gradient-to-r from-teal-200 via-amber-100 to-amber-200 bg-clip-text text-transparent">Sāṅgīt</span>
                 <span className="text-[9px] tracking-wider uppercase text-zinc-500 font-semibold">Studio Sound</span>
               </div>
             </div>
@@ -179,6 +181,33 @@ export default function Sidebar() {
               </svg>
               <span className={isDiscover ? 'bg-gradient-to-r from-violet-300 via-fuchsia-300 to-indigo-300 bg-clip-text text-transparent font-bold' : ''}>
                 Discover
+              </span>
+            </button>
+
+            {/* 3.5 TASTE DNA (LIVE WRAPPED & ALGORITHMIC PROFILE) */}
+            <button
+              onClick={() => setIsTasteDnaOpen(true)}
+              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 depth-button group text-teal-300 hover:text-white hover:bg-teal-500/10 border border-teal-500/20"
+              title="View your Live Music DNA and tune the recommendation serendipity slider"
+            >
+              <div className="flex items-center gap-3">
+                <svg
+                  className="w-4.5 h-4.5 shrink-0 transition-transform duration-200 group-hover:scale-110 text-teal-400"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                </svg>
+                <span className="font-semibold bg-gradient-to-r from-teal-300 via-emerald-200 to-amber-200 bg-clip-text text-transparent">
+                  Taste DNA
+                </span>
+              </div>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 font-bold uppercase tracking-wider">
+                Live
               </span>
             </button>
 
@@ -326,7 +355,7 @@ export default function Sidebar() {
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/50" />
               <span className="font-normal text-zinc-400">Lossless Studio</span>
             </div>
-            <span className="text-[10px] text-zinc-600 font-mono">v1.2.0</span>
+            <span className="text-[10px] text-zinc-600 font-mono">v1.5.0</span>
           </div>
 
           <button
@@ -339,6 +368,9 @@ export default function Sidebar() {
           </button>
         </div>
       </aside>
+
+      {/* Sāṅgīt Taste DNA & Algorithmic Intelligence Modal */}
+      <TasteDnaModal isOpen={isTasteDnaOpen} onClose={() => setIsTasteDnaOpen(false)} />
     </>
   );
 }

@@ -12,12 +12,20 @@ import {
 } from '../features/player/playerSlice';
 import { fetchSongs, toggleLike, setLiked } from '../store/songsSlice';
 import { downloadTrack, removeDownloadedTrack } from '../lib/offline-storage';
+import { getTasteProfile, getTopUserAttributes } from '../lib/personalization';
 import AddToPlaylistModal from './AddToPlaylistModal';
 import type { Song } from '../types/music';
 
 interface SearchResponse {
   local: Song[];
   global: Song[];
+  intent?: {
+    cleanQuery: string;
+    detectedMood: string | null;
+    detectedEra: string | null;
+    detectedGenre: string | null;
+    prefersLossless: boolean;
+  } | null;
 }
 
 function formatDuration(secs: number | null): string {
@@ -155,7 +163,10 @@ export default function SearchView() {
     setLoading(true);
     const timeoutId = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}`);
+        const { topGenre, topArtist } = getTopUserAttributes();
+        const genreParam = topGenre ? `&genre=${encodeURIComponent(topGenre)}` : '';
+        const artistParam = topArtist ? `&artist=${encodeURIComponent(topArtist)}` : '';
+        const res = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}${genreParam}${artistParam}`);
         if (res.ok) {
           const data: SearchResponse = await res.json();
           startTransition(() => {
@@ -249,13 +260,13 @@ export default function SearchView() {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="What do you want to play?"
-            className="w-full bg-white/[0.08] hover:bg-white/[0.12] focus:bg-white/[0.14] text-white placeholder-zinc-400 text-sm font-medium pl-12 pr-12 py-3.5 rounded-full border border-white/10 focus:border-white/25 focus:outline-none transition-all duration-200 shadow-lg shadow-black/40 backdrop-blur-md"
+            placeholder="Search songs, artists, or intents (e.g. 'romantic 90s', 'chill lofi', 'punjabi workout')..."
+            className="w-full bg-white/[0.08] hover:bg-white/[0.12] focus:bg-white/[0.14] text-white placeholder-zinc-400 text-sm font-medium pl-12 pr-12 py-3.5 rounded-full border border-white/10 focus:border-teal-500/40 focus:outline-none transition-all duration-200 shadow-lg shadow-black/40 backdrop-blur-md"
           />
 
           {loading ? (
             <div className="absolute right-4.5">
-              <span className="w-4 h-4 rounded-full border-2 border-violet-500 border-t-transparent animate-spin inline-block" />
+              <span className="w-4 h-4 rounded-full border-2 border-teal-400 border-t-transparent animate-spin inline-block" />
             </div>
           ) : query ? (
             <button
@@ -269,6 +280,33 @@ export default function SearchView() {
             </button>
           ) : null}
         </div>
+
+        {/* Sāṅgīt Neural Search Intent Chips */}
+        {results.intent && (results.intent.detectedMood || results.intent.detectedEra || results.intent.detectedGenre || results.intent.prefersLossless) && (
+          <div className="flex flex-wrap items-center gap-2 mt-3 px-2">
+            <span className="text-[11px] text-zinc-400 font-medium">Neural Intent:</span>
+            {results.intent.detectedMood && (
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-teal-500/20 text-teal-300 border border-teal-500/30">
+                ✨ Mood: {results.intent.detectedMood}
+              </span>
+            )}
+            {results.intent.detectedEra && (
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                📅 Era: {results.intent.detectedEra}
+              </span>
+            )}
+            {results.intent.detectedGenre && (
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                🎵 Genre: {results.intent.detectedGenre}
+              </span>
+            )}
+            {results.intent.prefersLossless && (
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                💎 320kbps Master
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 2. DEFAULT VIEW: BROWSE ALL GENRES & CATEGORIES (SPOTIFY SEARCH HOME) */}

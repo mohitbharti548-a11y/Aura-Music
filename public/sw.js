@@ -1,11 +1,13 @@
-// public/sw.js - Aura Music Progressive Web App Service Worker with In-App Auto-Update
-const CACHE_VERSION = 'aura-v1.4.2';
+// public/sw.js - Sāṅgīt Progressive Web App Service Worker with In-App Auto-Update
+const CACHE_VERSION = 'sangit-v1.5.0';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
-  '/logo.svg',
-  '/icons/icon-192.svg',
-  '/icons/icon-512.svg',
+  '/logo.png',
+  '/logo-mark.png',
+  '/favicon.png',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
 ];
 
 // 1. Install: Cache core static shell
@@ -32,8 +34,8 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
-          if (key !== CACHE_VERSION && key.startsWith('aura-v')) {
-            console.log('[Aura SW] Deleting obsolete cache:', key);
+          if (key !== CACHE_VERSION && (key.startsWith('sangit-v') || key.startsWith('aura-v'))) {
+            console.log('[Sāṅgīt SW] Deleting obsolete cache:', key);
             return caches.delete(key);
           }
         })

@@ -1,7 +1,7 @@
 <div align="center">
 
-# ✦ AURA MUSIC
-### Lossless Sound Reimagined • Minimalist Studio Streaming
+# ✦ SĀṄGĪT (संगीत)
+### Studio Lossless Music Streaming • Re-engineered Algorithmic Intelligence
 
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
@@ -10,21 +10,22 @@
 [![PWA Ready](https://img.shields.io/badge/PWA-Installable-purple?style=for-the-badge&logo=pwa)](https://web.dev/progressive-web-apps/)
 
 <p align="center">
-  A state-of-the-art music streaming web & desktop application engineered for audiophiles and clean design enthusiasts. Featuring dual-engine fallback for full 320kbps streams, real-time synchronized lyrics, a 10-band Web Audio DSP equalizer, smart radio dynamic recommendations, and seamless cross-platform installation.
+  A state-of-the-art music streaming web & desktop application engineered for audiophiles. Built with a reverse-engineered and upgraded recommendation suite that surpasses Spotify: Camelot Wheel harmonic key & BPM flow, Neural & Phonetic Omni-Search with typo tolerance, real-time Taste DNA profiling with acoustic radar, steerable serendipity controls, and 320kbps master studio audio.
 </p>
 
 </div>
 
 ---
 
-## ⚡ Key Capabilities
+## ⚡ Beyond-Spotify Algorithmic Capabilities
 
+- 🎼 **Harmonic Camelot Wheel & DJ Flow Engine**: Unlike Spotify's abrupt transition jumps, Sāṅgīt evaluates musical keys (1A-12B Camelot clock) and ±8% BPM tempo continuity for seamless, studio-grade playlist progression.
+- 🧬 **Live Taste DNA & Real-Time Wrapped**: 365-day accessible music profile with a 5-dimension Acoustic Radar (Energy, Valence, Danceability, Organic Warmth, Tempo Pace) and Diurnal Chronotypes.
+- 🎚️ **Steerable Serendipity Slider**: Defeats Spotify's repetitive 25-song echo chamber. Users can freely dial their algorithm between *Familiar Comfort (90/10)* and *Deep Discovery (10/90)*.
+- 🔍 **Neural & Phonetic Omni-Search**: Solves Spotify's transliteration blindness. Handles Hindi/Punjabi/global phonetic variations with Damerau-Levenshtein fuzzy matching and extracts natural language intent (e.g. *"romantic 90s"*, *"chill acoustic lofi"*).
 - 💎 **320kbps Master Stream Engine**: Dual-pipeline streaming resolving master audio with automated cryptographic DES fallback — zero 30-second preview restrictions.
-- 🎙️ **Synchronized LRC Lyrics Engine**: Real-time karaoke-style lyric scrolling with auto-centering, past lyric dimming, and interactive timeline seeking.
-- 🎛️ **10-Band Studio Web Audio Equalizer**: BiquadFilter DSP audio graph with Bass Boost, 3D Spatial Reverb, and preset profiles (Bass+, Vocal Clarity, Treble Master, Studio Flat).
-- 📻 **Smart Radio Dynamic Recommendations**: 30-track fair-interleaving dynamic radio generation matching artist, genre, release era, and acoustic energy.
-- 🫧 **Floating Dynamic Island Playbar**: Ultra-clean minimal outline controls with expandable features hub, quick queue manager, and sleep timer.
-- 📱 **Universal Cross-Platform (PWA & Desktop)**: Installable natively on **Android**, **iOS**, **Windows**, **macOS**, and **Linux**.
+- 🎙️ **Synchronized LRC Lyrics Engine**: Real-time karaoke-style lyric scrolling with auto-centering and interactive timeline seeking.
+- 🎛️ **10-Band Studio Web Audio Equalizer**: BiquadFilter DSP audio graph with Bass Boost, 3D Spatial Reverb, and preset profiles.
 
 ---
 

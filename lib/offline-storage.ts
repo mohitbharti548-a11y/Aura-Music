@@ -2,7 +2,7 @@
 // Robust client-side IndexedDB storage for downloading and playing tracks offline.
 import type { Song } from '@/types/music';
 
-const DB_NAME = 'aura_music_db';
+const DB_NAME = 'sangit_music_db';
 const DB_VERSION = 1;
 const STORE_NAME = 'offline_tracks';
 

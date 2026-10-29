@@ -15,7 +15,7 @@ function createWindow() {
     minWidth: 800,
     minHeight: 600,
     backgroundColor: '#070709',
-    title: 'Aura • Lossless Music Streaming',
+    title: 'Sāṅgīt • Studio Lossless Music Streaming',
     titleBarStyle: 'hiddenInset', // macOS aesthetic hidden titlebar
     frame: process.platform === 'darwin' ? false : true, // native frame on windows
     webPreferences: {

@@ -81,10 +81,10 @@ export default function SettingsModal({
             <div className="flex items-center justify-between mb-3">
               <div>
                 <p className="text-xs font-bold text-white">Application Updates</p>
-                <p className="text-[10px] text-zinc-400">Keep Aura up-to-date with latest studio patches</p>
+                <p className="text-[10px] text-zinc-400">Keep Sāṅgīt up-to-date with latest studio patches</p>
               </div>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/30">
-                v1.4.0
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30">
+                v1.5.0
               </span>
             </div>
 

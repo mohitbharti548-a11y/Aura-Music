@@ -8,6 +8,7 @@ import { selectPlaylist } from '../store/playlistsSlice';
 import { getPersonalizedFeeds } from '../lib/personalization';
 import SettingsModal from './SettingsModal';
 import AddToPlaylistModal from './AddToPlaylistModal';
+import TasteDnaModal from './TasteDnaModal';
 import type { Song } from '../types/music';
 
 const GENRE_CHIPS = [
@@ -36,6 +37,7 @@ export default function HomeView({
   const [activeChip, setActiveChip] = useState('All');
   const [speedDialPage, setSpeedDialPage] = useState(0);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isTasteDnaOpen, setIsTasteDnaOpen] = useState(false);
   const [playlistModalSong, setPlaylistModalSong] = useState<Song | null>(null);
 
   function handlePlay(song: Song) {
@@ -92,14 +94,40 @@ export default function HomeView({
   return (
     <div className="flex-1 overflow-y-auto px-4 sm:px-8 pt-5 sm:pt-6 pb-36 sm:pb-32 bg-[#08080c] select-none">
       
-      {/* 1. CLEAN TOP HEADER (Matching Reference Image 3) */}
+      {/* 1. SĀṄGĪT CLEAN TOP HEADER */}
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white font-sans">
-          Aura Music
-        </h1>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#36848d] via-[#48989f] to-[#d1b27d] p-[1.5px] shadow-lg shadow-teal-500/20 flex items-center justify-center">
+            <div className="w-full h-full bg-[#08080c] rounded-[14px] flex items-center justify-center p-1.5">
+              <img src="/logo-mark.png" alt="Sāṅgīt Logo" className="w-full h-full object-contain" />
+            </div>
+          </div>
+          <div className="flex flex-col">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white font-sans flex items-center gap-2">
+              <span className="bg-gradient-to-r from-teal-200 via-amber-100 to-amber-200 bg-clip-text text-transparent font-serif">
+                Sāṅgīt
+              </span>
+            </h1>
+            <span className="text-[10px] tracking-widest uppercase text-zinc-400 font-semibold -mt-0.5">
+              Studio Lossless Sound
+            </span>
+          </div>
+        </div>
 
-        {/* Top-Right Action Icons (History, Trending, Party/Group, Settings) */}
+        {/* Top-Right Action Icons */}
         <div className="flex items-center gap-2 sm:gap-3 text-zinc-300">
+          {/* Taste DNA Interactive Button */}
+          <button
+            onClick={() => setIsTasteDnaOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-teal-500/15 hover:bg-teal-500/25 border border-teal-500/30 text-teal-300 transition-all active:scale-95 text-xs font-semibold shadow-sm shadow-teal-500/10 cursor-pointer"
+            title="Open Live Music DNA & Serendipity Steerer"
+          >
+            <svg className="w-4 h-4 text-teal-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+            </svg>
+            <span className="hidden sm:inline">Taste DNA</span>
+          </button>
+
           {/* History Icon */}
           <button
             onClick={() => dispatch(setQueueOpen(true))}
@@ -170,6 +198,65 @@ export default function HomeView({
           );
         })}
       </div>
+
+      {/* 2.5 SĀṄGĪT HARMONIC DAILY MIXES (BETTER THAN SPOTIFY) */}
+      <section className="mb-7">
+        <div className="flex items-center justify-between mb-3 px-1">
+          <div className="flex items-center gap-2">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-300">
+              Sāṅgīt Dynamic Mixes
+            </h2>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 font-semibold border border-teal-500/30">
+              Harmonic Flow
+            </span>
+          </div>
+          <button
+            onClick={() => setIsTasteDnaOpen(true)}
+            className="text-xs text-teal-400 hover:text-teal-300 font-semibold flex items-center gap-1 cursor-pointer"
+          >
+            <span>Taste DNA</span>
+            <span>→</span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {personalized.dailyMixes.map((mix) => {
+            const firstTrack = mix.tracks[0];
+            return (
+              <div
+                key={mix.id}
+                onClick={() => {
+                  if (firstTrack) handlePlay(firstTrack);
+                }}
+                className="group relative p-3.5 rounded-2xl bg-[#12121c]/90 hover:bg-[#1a1a28] border border-white/[0.08] hover:border-teal-500/40 transition-all duration-300 cursor-pointer shadow-md overflow-hidden flex flex-col justify-between"
+              >
+                <div className={`absolute top-0 right-0 w-28 h-28 bg-gradient-to-br ${mix.color} opacity-20 blur-2xl pointer-events-none group-hover:opacity-40 transition-opacity`} />
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-teal-400 font-mono">
+                      {mix.id.toUpperCase()}
+                    </span>
+                    <div className="w-6 h-6 rounded-full bg-white/10 group-hover:bg-teal-400 group-hover:text-black flex items-center justify-center transition-all">
+                      <svg className="w-3 h-3 fill-current ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                    </div>
+                  </div>
+                  <h3 className="text-xs font-bold text-white line-clamp-1 group-hover:text-teal-200 transition-colors">
+                    {mix.title}
+                  </h3>
+                  <p className="text-[10px] text-zinc-400 line-clamp-2 mt-1 leading-snug">
+                    {mix.subtitle}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 mt-3 pt-2 border-t border-white/[0.06] text-[10px] text-zinc-500">
+                  <span>{mix.tracks.length} tracks</span>
+                  <span>•</span>
+                  <span>DJ Flow</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
 
       {/* 3. SPEED DIAL (3x3 Grid with Punjabi, Hindi, and Global Hits) */}
       <section className="mb-8">
@@ -372,6 +459,11 @@ export default function HomeView({
         song={playlistModalSong}
         isOpen={!!playlistModalSong}
         onClose={() => setPlaylistModalSong(null)}
+      />
+
+      <TasteDnaModal
+        isOpen={isTasteDnaOpen}
+        onClose={() => setIsTasteDnaOpen(false)}
       />
     </div>
   );

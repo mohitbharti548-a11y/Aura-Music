@@ -27,7 +27,7 @@ export function updateMediaSessionMetadata(
     navigator.mediaSession.metadata = new MediaMetadata({
       title: song.title,
       artist: song.artist,
-      album: song.album || 'Aura Lossless Studio',
+      album: song.album || 'Sāṅgīt Lossless Studio',
       artwork: [
         { src: coverUrl, sizes: '96x96', type: 'image/png' },
         { src: coverUrl, sizes: '128x128', type: 'image/png' },

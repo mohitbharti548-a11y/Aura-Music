@@ -26,10 +26,10 @@ export default function PwaRegister() {
       const res = await fetch(`/api/version?_t=${Date.now()}`, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
-        const storedVersion = localStorage.getItem('aura_app_version');
+        const storedVersion = localStorage.getItem('sangit_app_version');
 
         if (!storedVersion) {
-          localStorage.setItem('aura_app_version', data.version);
+          localStorage.setItem('sangit_app_version', data.version);
           if (isManual) {
             setUpdateAvailable(true);
             setCheckingStatus(null);
@@ -39,7 +39,7 @@ export default function PwaRegister() {
           if (isManual) setCheckingStatus(null);
         } else {
           if (isManual) {
-            setCheckingStatus(`Aura is up to date (v${data.version})`);
+            setCheckingStatus(`Sāṅgīt is up to date (v${data.version})`);
             setTimeout(() => setCheckingStatus(null), 3000);
           }
         }
@@ -200,50 +200,30 @@ export default function PwaRegister() {
 
             {/* Version Title */}
             <h2 className="text-2xl font-bold text-white tracking-tight mb-4">
-              Version v1.4.2 is available
+              Version v1.5.0 is available
             </h2>
 
             {/* Changelog Card Box */}
             <div className="bg-[#2a1f24]/90 border border-white/[0.06] rounded-2xl p-4 mb-5 space-y-3.5 text-xs text-zinc-300 max-h-72 overflow-y-auto custom-scrollbar">
-              <p className="text-sm font-semibold text-[#fca5a5]">Changelog</p>
+              <p className="text-sm font-semibold text-[#fca5a5]">Changelog • Sāṅgīt</p>
 
               {/* Fixes Section */}
               <div className="space-y-1.5">
-                <p className="text-xs font-bold text-white uppercase tracking-wider">• Fixes</p>
+                <p className="text-xs font-bold text-white uppercase tracking-wider">• Upgrades</p>
                 <p className="pl-3 text-[11px] text-zinc-300 leading-relaxed">
-                  • Permanently suppressed Netlify badge watermark across all screen views.
+                  • Camelot Wheel harmonic transitions: DJ-grade key & tempo matching.
                 </p>
                 <p className="pl-3 text-[11px] text-zinc-300 leading-relaxed">
-                  • Fixed Android hardware back button to navigate stack hierarchically.
+                  • Neural & Phonetic Omni-Search: Typo and transliteration resilience.
                 </p>
                 <p className="pl-3 text-[11px] text-zinc-300 leading-relaxed">
-                  • Full lock screen & notification panel background media controls.
+                  • Live Taste DNA & Acoustic Radar with customizable Serendipity Steerer.
                 </p>
                 <p className="pl-3 text-[11px] text-zinc-300 leading-relaxed">
-                  • Continuous playlist queue generation without 10-song looping.
+                  • Dynamic Daily Mixes 1-4 with zero-payola harmonic sequencing.
                 </p>
                 <p className="pl-3 text-[11px] text-zinc-300 leading-relaxed">
-                  • Minimized floating playcard quick like & hide direct buttons.
-                </p>
-              </div>
-
-              {/* Improvements Section */}
-              <div className="space-y-1.5 pt-1">
-                <p className="text-xs font-bold text-white uppercase tracking-wider">• Improvements</p>
-                <p className="pl-3 text-[11px] text-zinc-300 leading-relaxed">
-                  • 120Hz fluid motion & hardware-accelerated transitions throughout.
-                </p>
-                <p className="pl-3 text-[11px] text-zinc-300 leading-relaxed">
-                  • Modern disconnected-bar Aura logo with radiant soundwave rings.
-                </p>
-                <p className="pl-3 text-[11px] text-zinc-300 leading-relaxed">
-                  • Clean header with mood & genre filter chips (Punjabi, Hindi, Romance, Workout).
-                </p>
-                <p className="pl-3 text-[11px] text-zinc-300 leading-relaxed">
-                  • Speed Dial 3x3 grid with top Punjabi, Hindi, and Global hit charts.
-                </p>
-                <p className="pl-3 text-[11px] text-zinc-300 leading-relaxed">
-                  • Dedicated Settings panel with 1-tap direct app updates.
+                  • Sāṅgīt brand identity with custom teal & gold clef logo.
                 </p>
               </div>
             </div>

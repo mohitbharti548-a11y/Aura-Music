@@ -20,39 +20,43 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Aura • Lossless Music Streaming & Studio Sound",
-  description: "Experience high-fidelity lossless music streaming, synchronized lyrics, Web Audio DSP equalizer, and studio audio master with Aura.",
-  manifest: "/manifest.json?v=3",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://auramusicrep.netlify.app'),
+  title: "Sāṅgīt • Studio Lossless Music Streaming",
+  description: "Experience high-fidelity lossless music streaming, Camelot harmonic flow recommendations, live Taste DNA, real-time synchronized lyrics, and studio DSP equalizer with Sāṅgīt.",
+  manifest: "/manifest.json?v=6",
   icons: {
     icon: [
-      { url: "/icons/icon-192.png?v=3", sizes: "192x192", type: "image/png" },
-      { url: "/icons/icon-512.png?v=3", sizes: "512x512", type: "image/png" },
-      { url: "/icons/icon-512.svg?v=3", type: "image/svg+xml" },
+      { url: "/favicon.png?v=6", sizes: "48x48", type: "image/png" },
+      { url: "/icons/icon-192.png?v=6", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png?v=6", sizes: "512x512", type: "image/png" },
+      { url: "/logo-mark.png?v=6", type: "image/png" },
     ],
     apple: [
-      { url: "/icons/icon-192.png?v=3", sizes: "192x192", type: "image/png" },
-      { url: "/icons/icon-512.png?v=3", sizes: "512x512", type: "image/png" },
+      { url: "/icons/icon-192.png?v=6", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png?v=6", sizes: "512x512", type: "image/png" },
     ],
   },
-  keywords: ["music player", "lossless audio", "spotify web player", "streaming", "web audio equalizer", "lyrics", "aura sound"],
-  authors: [{ name: "Aura Sound Labs" }],
+  keywords: ["music player", "lossless audio", "sangit", "sāṅgīt", "spotify killer", "harmonic flow", "web audio equalizer", "lyrics", "studio sound"],
+  authors: [{ name: "Sāṅgīt Audio Labs" }],
   openGraph: {
-    title: "Aura • Sound Reimagined",
-    description: "Minimalist lossless music player with tactile depth, synchronized lyrics, and Web Audio equalizer.",
+    title: "Sāṅgīt • Sound Reimagined",
+    description: "Lossless studio streaming with Camelot harmonic recommendations, real-time Taste DNA, and synchronized lyrics.",
     type: "website",
     locale: "en_US",
-    siteName: "Aura Music",
+    siteName: "Sāṅgīt",
+    images: [{ url: "/logo.png" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Aura • Lossless Music Streaming",
-    description: "Stream high-fidelity music with real-time lyrics and studio sound equalizer.",
+    title: "Sāṅgīt • Studio Lossless Music",
+    description: "Stream 320kbps master studio audio with real-time lyrics, harmonic DJ flow, and live Taste DNA.",
+    images: ["/logo.png"],
   },
-  applicationName: "Aura Music",
+  applicationName: "Sāṅgīt",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Aura Music",
+    title: "Sāṅgīt",
   },
 };
 

@@ -8,7 +8,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const seedSong: Song = body.seedSong || body;
     const hiddenTrackIds: string[] = Array.isArray(body.hiddenTrackIds) ? body.hiddenTrackIds : [];
+    const recentTrackIds: string[] = Array.isArray(body.recentTrackIds) ? body.recentTrackIds : [];
     const limit: number = typeof body.limit === 'number' ? body.limit : 10;
+    const serendipity: number = typeof body.serendipity === 'number' ? body.serendipity : 0.35;
 
     if (!seedSong || !seedSong.title || !seedSong.artist) {
       return Response.json(
@@ -17,7 +19,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const recommendations = await generateSongRecommendations(seedSong, limit, hiddenTrackIds);
+    const recommendations = await generateSongRecommendations(seedSong, limit, hiddenTrackIds, {
+      hiddenTrackIds,
+      recentTrackIds,
+      serendipity,
+      limit,
+    });
 
     return Response.json({
       seed: seedSong,

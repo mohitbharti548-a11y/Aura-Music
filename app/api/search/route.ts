@@ -1,8 +1,11 @@
 // app/api/search/route.ts
+// Sāṅgīt Neural & Phonetic Omni-Search API
+// Multi-Tier Federated Search: Neon DB + JioSaavn 320kbps Master Engine + Apple iTunes Fallback
 import type { NextRequest } from 'next/server';
 import pool from '@/lib/db';
 import { searchJioSaavn } from '@/lib/jiosaavn-client';
 import { searchItunes, getHiResArtwork } from '@/lib/itunes-client';
+import { parseSearchIntent, scoreSearchRelevance } from '@/lib/search-engine';
 import type { Song } from '@/types/music';
 
 const DEMO_USER = '00000000-0000-0000-0000-000000000001';
@@ -13,15 +16,19 @@ export async function GET(request: NextRequest) {
     request.nextUrl.searchParams.get('userId') ??
     process.env.NEXT_PUBLIC_DEMO_USER_ID ??
     DEMO_USER;
+  const userGenre = request.nextUrl.searchParams.get('genre') || null;
+  const userArtist = request.nextUrl.searchParams.get('artist') || null;
 
   if (!query) {
-    return Response.json({ local: [], global: [] });
+    return Response.json({ local: [], global: [], intent: null });
   }
 
   try {
-    const searchPattern = `%${query}%`;
+    // 1. Parse Search Intent (Mood, Era, Genre, Quality)
+    const intent = parseSearchIntent(query);
+    const searchPattern = `%${intent.cleanQuery}%`;
 
-    // 1. Search Local Database in Neon PostgreSQL
+    // 2. Query Channel 1: Local Neon Database (Instant match)
     const dbPromise = pool.query(
       `SELECT s.*,
               CASE WHEN ls.song_id IS NOT NULL THEN true ELSE false END AS is_liked
@@ -34,23 +41,36 @@ export async function GET(request: NextRequest) {
           OR  s.album ILIKE $1
           OR  s.genre ILIKE $1
        ORDER  BY s.created_at DESC
-       LIMIT  10`,
+       LIMIT  12`,
       [searchPattern, userId]
     );
 
-    // 2. Engine 1: JioSaavn High-Fidelity 320kbps Full-Length Stream Engine
-    const saavnPromise = searchJioSaavn(query, 12);
+    // 3. Query Channel 2: JioSaavn 320kbps Master Stream Engine
+    const saavnPrimaryPromise = searchJioSaavn(intent.cleanQuery, 14);
 
-    // 3. Engine 2: Apple iTunes Catalog (Secondary Fallback & Enrichment)
-    const itunesPromise = searchItunes(query, 8);
+    // If a semantic intent was detected (e.g. "romantic", "90s", "chill"), perform a secondary targeted search
+    const saavnIntentPromise =
+      intent.detectedMood || intent.detectedEra || intent.detectedGenre
+        ? searchJioSaavn(
+            `${intent.cleanQuery} ${intent.detectedMood || ''} ${intent.detectedEra || ''} ${intent.detectedGenre || ''}`.trim(),
+            8
+          )
+        : Promise.resolve([] as Song[]);
 
-    const [dbResult, saavnSongs, itunesTracks] = await Promise.all([
+    // 4. Query Channel 3: Apple iTunes Global Catalog Fallback
+    const itunesPromise = searchItunes(intent.cleanQuery, 6);
+
+    const [dbResult, saavnPrimary, saavnIntent, itunesTracks] = await Promise.all([
       dbPromise.catch((err) => {
         console.error('Local DB search error:', err);
         return { rows: [] as Song[] };
       }),
-      saavnPromise.catch((err) => {
-        console.error('JioSaavn search error:', err);
+      saavnPrimaryPromise.catch((err) => {
+        console.error('JioSaavn primary search error:', err);
+        return [] as Song[];
+      }),
+      saavnIntentPromise.catch((err) => {
+        console.error('JioSaavn intent search error:', err);
         return [] as Song[];
       }),
       itunesPromise.catch((err) => {
@@ -65,14 +85,14 @@ export async function GET(request: NextRequest) {
       localSongs.map((s) => `${s.title.toLowerCase()}||${s.artist.toLowerCase()}`)
     );
 
-    const globalSongs: Song[] = [];
+    const globalCandidates: Song[] = [];
 
-    // Add JioSaavn Full 320kbps Studio Releases first
-    for (const song of saavnSongs) {
+    // Combine JioSaavn results
+    for (const song of [...saavnPrimary, ...saavnIntent]) {
       const key = `${song.title.toLowerCase()}||${song.artist.toLowerCase()}`;
       if (!existingKeys.has(key)) {
         existingKeys.add(key);
-        globalSongs.push(song);
+        globalCandidates.push(song);
       }
     }
 
@@ -81,7 +101,7 @@ export async function GET(request: NextRequest) {
       const key = `${t.trackName.toLowerCase()}||${t.artistName.toLowerCase()}`;
       if (!existingKeys.has(key) && t.previewUrl) {
         existingKeys.add(key);
-        globalSongs.push({
+        globalCandidates.push({
           id: `official-${t.trackId}`,
           title: t.trackName,
           artist: t.artistName,
@@ -100,9 +120,19 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // 5. Intelligent Multi-Vector Relevance Reranking
+    const rankedGlobal = globalCandidates
+      .map((song) => ({
+        song,
+        score: scoreSearchRelevance(song, query, intent, userGenre, userArtist),
+      }))
+      .sort((a, b) => b.score - a.score)
+      .map((item) => item.song);
+
     return Response.json({
+      intent,
       local: localSongs,
-      global: globalSongs,
+      global: rankedGlobal,
     });
   } catch (err) {
     console.error('GET /api/search error:', err);

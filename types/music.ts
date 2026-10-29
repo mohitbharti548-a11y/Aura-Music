@@ -29,6 +29,11 @@ export interface Song {
   bitrate_kbps?: number | null;
   is_lossless?: boolean | null;
   source?: string | null;          // e.g. 'upload', 'deezer', 'soundhelix'
+  // Sāṅgīt Algorithmic & Harmonic Flow Additions
+  match_reasons?: string[];
+  harmonic_key?: string;
+  bpm?: number;
+  acoustic_energy?: number;
 }
 
 export interface Playlist {

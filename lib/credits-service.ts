@@ -37,7 +37,7 @@ export function getSongCredits(song: Song): SongCredits {
 
   const producers = [
     `${mainSinger} Production`,
-    'Aura Audio Labs Master Studio',
+    'Sāṅgīt Audio Labs Master Studio',
   ];
 
   const isLosslessFormat =

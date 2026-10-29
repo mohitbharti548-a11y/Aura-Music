@@ -1,29 +1,28 @@
 // app/api/version/route.ts
-// Live App Version API for In-App Live Update Synchronization
+// Sāṅgīt Live App Version & Feature Changelog API
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   const versionData = {
-    version: '1.4.2',
-    appId: 'com.auramusic.app',
-    appName: 'Aura Music',
+    version: '1.5.0',
+    appId: 'com.sangit.app',
+    appName: 'Sāṅgīt',
     buildTime: new Date().toISOString(),
     fixes: [
-      'Permanently suppressed Netlify badge watermark across all views',
-      'Fixed Android hardware back button to navigate hierarchically instead of closing app',
-      'Fixed background playback controls on Android Notification Panel and Lock Screen',
-      'Fixed continuous playlist queue replenishment without repeating 10-song loops',
-      'Fixed lyrics auto-scroll jump when expanding player'
+      'Eliminated Spotify repetition trap with anti-fatigue frequency decay',
+      'Fixed abrupt acoustic transitions with Camelot wheel key matching',
+      'Multi-vector search tolerance for phonetic variations & transliterations',
+      'Permanently resolved Netlify watermark interference'
     ],
     improvements: [
-      '120Hz ultra-fluid refresh rate motion and hardware-accelerated transitions',
-      'Modern disconnected-bar Aura logo with radiant soundwave arcs',
-      'Clean top header with mood & genre chips (Punjabi, Hindi, Romance, Workout)',
-      'Speed Dial 3x3 grid with top Punjabi, Hindi, and Global charts',
-      '1-Tap direct like/favorite and hide buttons on floating mini-playcard',
-      'Comprehensive Settings panel with 1-tap instant in-app update'
+      'Complete brand redesign: Sāṅgīt with stylized teal and gold clef emblem',
+      'Harmonic Camelot Wheel DJ-grade transitions between queued tracks',
+      'Sāṅgīt Neural & Phonetic Omni-Search with natural language intent extraction',
+      'Live Taste DNA profile with real-time acoustic multi-vector radar',
+      'Interactive Serendipity Steerer slider (Familiar Comfort ↔ Deep Discovery)',
+      'Four dynamic smart daily mixes categorized by acoustic mood & tempo'
     ]
   };
 
