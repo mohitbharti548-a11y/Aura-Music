@@ -148,6 +148,7 @@ export default function PwaRegister() {
       if (res.ok) {
         const data = await res.json();
         if (data.version) {
+          localStorage.setItem('sangit_app_version', data.version);
           localStorage.setItem('aura_app_version', data.version);
         }
       }
@@ -258,7 +259,7 @@ export default function PwaRegister() {
               <span className="text-xs text-white">✦</span>
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-bold text-white truncate">Install Aura App</p>
+              <p className="text-xs font-bold text-white truncate">Install Sāṅgīt App</p>
               <p className="text-[10px] text-zinc-400 truncate">Add to Home Screen for offline music</p>
             </div>
           </div>
